@@ -25,6 +25,14 @@
 \usepackage{amsmath}
 \usepackage{url}
 \usepackage{listings}
+\lstset{language=C++,
+           basicstyle=\ttfamily,
+           keywordstyle=\color{blue}\ttfamily,
+           stringstyle=\color{red}\ttfamily,
+           frame = single,
+           commentstyle=\color{green}\ttfamily,
+          breaklines=true
+          }
 \usepackage[toc,page]{appendix}
 \usepackage{tikz}
 \usetikzlibrary{arrows,automata,fit}
@@ -77,4 +85,6 @@
 \newpage
 \tableofcontents
 \newpage
+\input{loops.tex}
+
 \end{document}
