@@ -1,0 +1,9 @@
+OrigCPU:
+    Added OpenMP to outer loop.
+setPayoff:
+    Privatized variable "payoff" with array expansion.
+    Distributed loop with payoff array calculation.
+rollback:
+    tridag loops:
+           Array expanded a,b,c, and y.
+           Performed loop distribution. (tridag in its own loop)
