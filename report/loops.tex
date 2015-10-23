@@ -1,0 +1,38 @@
+\section{Loops}
+\subsection{updateParams}
+\begin{lstlisting}
+for(unsigned i=0;i<globs.myX.size();++i)
+    for(unsigned j=0;j<globs.myY.size();++j) {
+        globs.myVarX[i][j] = exp(2.0*(  beta*log(globs.myX[i])   
+                                      + globs.myY[j]             
+                                      - 0.5*nu*nu*globs.myTimeline[g] )
+                                );
+        globs.myVarY[i][j] = exp(2.0*(  alpha*log(globs.myX[i])   
+                                      + globs.myY[j]             
+                                      - 0.5*nu*nu*globs.myTimeline[g] )
+                                );
+    }
+\end{lstlisting} 
+\subsection{setPayoff}
+\begin{lstlisting}
+for(unsigned i=0;i<globs.myX.size();++i){
+    REAL payoff = max(globs.myX[i]-strike, (REAL)0.0);
+    for(unsigned j=0;j<globs.myY.size();++j)
+        globs.myResult[i][j] = payoff;
+}
+\end{lstlisting} 
+\begin{lstlisting}
+REAL strike;
+PrivGlobs    globs(numX, numY, numT);
+
+for( unsigned i = 0; i < outer; ++ i ) {
+    strike = 0.001*i;
+    res[i] = value( globs, s0, strike, t,
+                    alpha, nu,    beta,
+                    numX,  numY,  numT );
+}
+\end{lstlisting}
+\subsection{rollBack}
+\begin{lstlisting}
+ 
+\end{lstlisting} 
