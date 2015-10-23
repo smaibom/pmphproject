@@ -6,7 +6,7 @@ setPayoff:
     Privatized variable "payoff" with array expansion.
     Distributed loop with payoff array calculation.
 rollback:
-    Performed array expansion on u and v.
+    Performed array expansion on u, v, (a/b/c)x/y, and yy.
     moved outer loop into function.
     tridag loops:
            Array expanded a,b,c, and y.
