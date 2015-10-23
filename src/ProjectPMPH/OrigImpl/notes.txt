@@ -7,3 +7,7 @@ rollback:
     tridag loops:
            Array expanded a,b,c, and y.
            Performed loop distribution. (tridag in its own loop)
+    implicit/explicit x & y loops:
+           Loop interchange in explicit x/y.
+           Privatized a, b, and c.
+           Merged implicit and explicit loops.
