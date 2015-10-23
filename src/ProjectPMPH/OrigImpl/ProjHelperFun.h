@@ -24,7 +24,7 @@ struct PrivGlobs {
   unsigned            myYindex;
 
   //	variable
-  vector<vector<REAL> >   myResult; // [numX][numY]
+  REAL*   myResult; // [numX][numY]
 
   //	coeffs
   vector<vector<REAL> >   myVarX; // [numX][numY]
@@ -61,11 +61,10 @@ struct PrivGlobs {
 
     this->  myVarX.resize(numX);
     this->  myVarY.resize(numX);
-    this->myResult.resize(numX);
+    this->myResult = (REAL*) malloc(sizeof(REAL) * numX * numY);
     for(unsigned i=0;i<numX;++i) {
       this->  myVarX[i].resize(numY);
       this->  myVarY[i].resize(numY);
-      this->myResult[i].resize(numY);
     }
 
   }

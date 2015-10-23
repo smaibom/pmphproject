@@ -37,7 +37,7 @@ void setPayoff(const REAL strike, PrivGlobs& globs )
 	{
       for(unsigned j=0;j<globs.numY;++j)
         {
-          globs.myResult[i][j] = payoff[i];
+          globs.myResult[i * globs.numY + j] = payoff[i];
         }
     }
 }
@@ -48,7 +48,7 @@ inline void tridag(
     const vector<REAL>&   c,   // size [n]
     const vector<REAL>&   r,   // size [n]
     const int             n,
-          vector<REAL>&   u,   // size [n]
+          REAL*   u,   // size [n]
           vector<REAL>&   uu   // size [n] temporary
 ) {
     int    i, offset;
@@ -102,6 +102,7 @@ rollback( const unsigned g, PrivGlobs* globs, int outer, const int& numX,  const
 
 
 
+
   // X-loop
 #pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for (int o = 0; o < outer; o++) {
@@ -115,17 +116,17 @@ rollback( const unsigned g, PrivGlobs* globs, int outer, const int& numX,  const
 
 
         //	explicit x
-        u[o][j][i] = dtInv*globs[o].myResult[i][j];
+        u[o][j][i] = dtInv*globs[o].myResult[i * numY + j];
 
         if(i > 0) {
           u[o][j][i] += 0.5*( 0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][0] )
-            * globs[o].myResult[i-1][j];
+            * globs[o].myResult[i-1 * numY + j];
         }
         u[o][j][i]  +=  0.5*( 0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][1] )
-          * globs[o].myResult[i][j];
+          * globs[o].myResult[i * numY + j];
         if(i < numX-1) {
           u[o][j][i] += 0.5*( 0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][2] )
-            * globs[o].myResult[i+1][j];
+            * globs[o].myResult[i+1 * numY + j];
         }
       }
     }
@@ -143,13 +144,13 @@ rollback( const unsigned g, PrivGlobs* globs, int outer, const int& numX,  const
 
           if(j > 0) {
             v[o][i][j] +=  ( 0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][0] )
-              *  globs[o].myResult[i][j-1];
+              *  globs[o].myResult[i * numY + j-1];
           }
           v[o][i][j]  +=   ( 0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][1] )
-            *  globs[o].myResult[i][j];
+            *  globs[o].myResult[i  * numY + j];
           if(j < numY-1) {
             v[o][i][j] +=  ( 0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][2] )
-              *  globs[o].myResult[i][j+1];
+              *  globs[o].myResult[i * numY + j+1];
           }
           u[o][j][i] += v[o][i][j];
 
@@ -165,7 +166,7 @@ rollback( const unsigned g, PrivGlobs* globs, int outer, const int& numX,  const
   for(int o = 0; o < outer; o++) {
     for(int j=0;j<numY;j++) {
       // here yy should have size [numX]
-      tridag(ax[o][j],bx[o][j],cx[o][j],u[o][j],numX,u[o][j], yy[o]);
+      tridag(ax[o][j],bx[o][j],cx[o][j],u[o][j],numX,u[o][j].data(), yy[o]);
     }
   }
 
@@ -183,7 +184,7 @@ rollback( const unsigned g, PrivGlobs* globs, int outer, const int& numX,  const
   for(int o = 0; o < outer; o++) {
     for(int i=0;i<numX;i++) {
       // here yy should have size [numY]
-      tridag(ay[o][i],by[o][i],cy[o][i],y[o][i],numY,globs[o].myResult[i],yy[o]);
+      tridag(ay[o][i],by[o][i],cy[o][i],y[o][i],numY, &globs[o].myResult[i * numY],yy[o]);
     }
   }
 }
@@ -219,7 +220,7 @@ void   run_OrigCPU(
       rollback(g, globals, outer, numX, numY);
     }
   for (unsigned int i = 0; i < outer; i++) {
-    res[i] = globals[i].myResult[globals[i].myXindex][globals[i].myYindex];
+    res[i] = globals[i].myResult[globals[i].myXindex * numY + globals[i].myYindex];
   }
 }
 

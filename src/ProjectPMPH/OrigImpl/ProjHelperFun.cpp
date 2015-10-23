@@ -17,7 +17,6 @@ void initGrid(  const REAL s0, const REAL alpha, const REAL nu,const REAL t,
 ) {
     for(unsigned i=0;i<numT;++i)
         globs.myTimeline[i] = t*i/(numT-1);
-
     const REAL stdX = 20.0*alpha*s0*sqrt(t);
     const REAL dx = stdX/numX;
     globs.myXindex = static_cast<unsigned>(s0/dx) % numX;
