@@ -8,9 +8,9 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta, const REA
 #pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for( unsigned o = 0; o < outer; ++ o )
         {
-          for(unsigned i=0;i<globs[o].myX.size();++i)
+          for(unsigned i=0;i<globs[o].numX;++i)
             {
-              for(unsigned j=0;j<globs[o].myY.size();++j)
+              for(unsigned j=0;j<globs[o].numY;++j)
                 {
                   globs[o].myVarX[i][j] = exp(2.0*(  beta*log(globs[o].myX[i])
                                                      + globs[o].myY[j]
@@ -28,14 +28,14 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta, const REA
 
 void setPayoff(const REAL strike, PrivGlobs& globs )
 {
-  REAL payoff[globs.myX.size()];
-  for (unsigned i=0;i<globs.myX.size();++i) {
+  REAL payoff[globs.numX];
+  for (unsigned i=0;i<globs.numX;++i) {
     payoff[i] = max(globs.myX[i]-strike, (REAL)0.0);
   }
 
-  for(unsigned i=0;i<globs.myX.size();++i)
+  for(unsigned i=0;i<globs.numX;++i)
 	{
-      for(unsigned j=0;j<globs.myY.size();++j)
+      for(unsigned j=0;j<globs.numY;++j)
         {
           globs.myResult[i][j] = payoff[i];
         }
@@ -206,8 +206,8 @@ void   run_OrigCPU(
   for (unsigned int i = 0; i < outer; i++) {
     globals[i] = PrivGlobs(numX, numY, numT);
     initGrid(s0,alpha,nu,t, numX, numY, numT, globals[i]);
-    initOperator(globals[i].myX,globals[i].myDxx);
-    initOperator(globals[i].myY,globals[i].myDyy);
+    initOperator(globals[i].myX, globals[i].numX, globals[i].myDxx);
+    initOperator(globals[i].myY, globals[i].numY,globals[i].myDyy);
 
     setPayoff(0.001 * i, globals[i]);
   }
