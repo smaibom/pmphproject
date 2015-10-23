@@ -99,84 +99,95 @@ rollback( const unsigned g, PrivGlobs* globs, int outer, const int& numX,  const
 
   vector<vector<vector<REAL> > > y(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [max(numX,numY)][max(numX, numY)]
   vector<vector<REAL> > yy(outer, vector<REAL>(numZ));  // temporary used in tridag  // [max(numX,numY)]
+
+
+
+  // X-loop
 #pragma omp parallel for default(shared) schedule(static) if(outer>8)
-  for (int o = 0; o < outer; o++)
-    {
-
-      unsigned i, j;
-
-      REAL dtInv = 1.0/(globs[o].myTimeline[g+1]-globs[o].myTimeline[g]);
-
-      // X-loop
-      for(j=0;j<numY;j++) {
-        for(i=0;i<numX;i++) {
-          // implicit x
-          ax[o][j][i] =		 - 0.5*(0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][0]);
-          bx[o][j][i] = dtInv - 0.5*(0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][1]);
-          cx[o][j][i] =		 - 0.5*(0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][2]);
+  for (int o = 0; o < outer; o++) {
+    REAL dtInv = 1.0/(globs[o].myTimeline[g+1]-globs[o].myTimeline[g]);
+    for(int j=0;j<numY;j++) {
+      for(int i=0;i<numX;i++) {
+        // implicit x
+        ax[o][j][i] =		 - 0.5*(0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][0]);
+        bx[o][j][i] = dtInv - 0.5*(0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][1]);
+        cx[o][j][i] =		 - 0.5*(0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][2]);
 
 
-          //	explicit x
-          u[o][j][i] = dtInv*globs[o].myResult[i][j];
+        //	explicit x
+        u[o][j][i] = dtInv*globs[o].myResult[i][j];
 
-          if(i > 0) {
-            u[o][j][i] += 0.5*( 0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][0] )
-              * globs[o].myResult[i-1][j];
-          }
-          u[o][j][i]  +=  0.5*( 0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][1] )
-            * globs[o].myResult[i][j];
-          if(i < numX-1) {
-            u[o][j][i] += 0.5*( 0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][2] )
-              * globs[o].myResult[i+1][j];
-          }
+        if(i > 0) {
+          u[o][j][i] += 0.5*( 0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][0] )
+            * globs[o].myResult[i-1][j];
         }
-      }
-
-      // Y-Loop
-      for(i=0;i<numX;i++) {
-        for(j=0;j<numY;j++)
-          {
-            // Explicit y
-            v[o][i][j] = 0.0;
-
-            if(j > 0) {
-              v[o][i][j] +=  ( 0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][0] )
-                *  globs[o].myResult[i][j-1];
-            }
-            v[o][i][j]  +=   ( 0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][1] )
-              *  globs[o].myResult[i][j];
-            if(j < numY-1) {
-              v[o][i][j] +=  ( 0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][2] )
-                *  globs[o].myResult[i][j+1];
-            }
-            u[o][j][i] += v[o][i][j];
-
-            // Implicit y
-            ay[o][i][j] =		 - 0.5*(0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][0]);
-            by[o][i][j] = dtInv - 0.5*(0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][1]);
-            cy[o][i][j] =		 - 0.5*(0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][2]);
-
-          }
-      }
-
-      for(j=0;j<numY;j++) {
-        // here yy should have size [numX]
-        tridag(ax[o][j],bx[o][j],cx[o][j],u[o][j],numX,u[o][j], yy[o]);
-      }
-
-      //	implicit y
-      for(i=0;i<numX;i++) {
-        for(j=0;j<numY;j++) {  // here a, b, c should have size [numY]
-          y[o][i][j] = dtInv*u[o][j][i] - 0.5*v[o][i][j];
+        u[o][j][i]  +=  0.5*( 0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][1] )
+          * globs[o].myResult[i][j];
+        if(i < numX-1) {
+          u[o][j][i] += 0.5*( 0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][2] )
+            * globs[o].myResult[i+1][j];
         }
-      }
-
-      for(i=0;i<numX;i++) {
-        // here yy should have size [numY]
-        tridag(ay[o][i],by[o][i],cy[o][i],y[o][i],numY,globs[o].myResult[i],yy[o]);
       }
     }
+  }
+#pragma omp parallel for default(shared) schedule(static) if(outer>8)
+  for (int o = 0; o < outer; o++) {
+    REAL dtInv = 1.0/(globs[o].myTimeline[g+1]-globs[o].myTimeline[g]);
+    unsigned i, j;
+    // Y-Loop
+    for(i=0;i<numX;i++) {
+      for(j=0;j<numY;j++)
+        {
+          // Explicit y
+          v[o][i][j] = 0.0;
+
+          if(j > 0) {
+            v[o][i][j] +=  ( 0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][0] )
+              *  globs[o].myResult[i][j-1];
+          }
+          v[o][i][j]  +=   ( 0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][1] )
+            *  globs[o].myResult[i][j];
+          if(j < numY-1) {
+            v[o][i][j] +=  ( 0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][2] )
+              *  globs[o].myResult[i][j+1];
+          }
+          u[o][j][i] += v[o][i][j];
+
+          // Implicit y
+          ay[o][i][j] =		 - 0.5*(0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][0]);
+          by[o][i][j] = dtInv - 0.5*(0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][1]);
+          cy[o][i][j] =		 - 0.5*(0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][2]);
+
+        }
+    }
+  }
+#pragma omp parallel for default(shared) schedule(static) if(outer>8)
+  for(int o = 0; o < outer; o++) {
+    for(int j=0;j<numY;j++) {
+      // here yy should have size [numX]
+      tridag(ax[o][j],bx[o][j],cx[o][j],u[o][j],numX,u[o][j], yy[o]);
+    }
+  }
+
+  //	implicit y
+#pragma omp parallel for default(shared) schedule(static) if(outer>8)
+  for(int o = 0; o < outer; o++) {
+    REAL dtInv = 1.0/(globs[o].myTimeline[g+1]-globs[o].myTimeline[g]);
+    for(int i=0;i<numX;i++) {
+      for(int j=0;j<numY;j++) {  // here a, b, c should have size [numY]
+        y[o][i][j] = dtInv*u[o][j][i] - 0.5*v[o][i][j];
+      }
+    }
+  }
+#pragma omp parallel for default(shared) schedule(static) if(outer>8)
+  for(int o = 0; o < outer; o++) {
+    for(int i=0;i<numX;i++) {
+      // here yy should have size [numY]
+      tridag(ay[o][i],by[o][i],cy[o][i],y[o][i],numY,globs[o].myResult[i],yy[o]);
+    }
+  }
 }
+
 
 
 void   run_OrigCPU(
