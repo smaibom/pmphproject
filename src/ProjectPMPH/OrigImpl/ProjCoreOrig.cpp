@@ -120,13 +120,13 @@ rollback( const unsigned g, PrivGlobs* globs, int outer, const int& numX,  const
 
         if(i > 0) {
           u[o][j][i] += 0.5*( 0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][0] )
-            * globs[o].myResult[i-1 * numY + j];
+            * globs[o].myResult[(i-1) * numY + j];
         }
         u[o][j][i]  +=  0.5*( 0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][1] )
           * globs[o].myResult[i * numY + j];
         if(i < numX-1) {
           u[o][j][i] += 0.5*( 0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][2] )
-            * globs[o].myResult[i+1 * numY + j];
+            * globs[o].myResult[(i+1) * numY + j];
         }
       }
     }
