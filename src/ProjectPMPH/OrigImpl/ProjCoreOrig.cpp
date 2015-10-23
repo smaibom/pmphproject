@@ -2,18 +2,21 @@
 #include "Constants.h"
 
 
-void updateParams(const unsigned g, const REAL alpha, const REAL beta, const REAL nu, PrivGlobs& globs, const int outer)
+void updateParams(const unsigned g, const REAL alpha, const REAL beta, const REAL nu, PrivGlobs* globs, const int outer)
 {
-    for(unsigned i=0;i<globs.myX.size();++i)
-        for(unsigned j=0;j<globs.myY.size();++j) {
-            globs.myVarX[i][j] = exp(2.0*(  beta*log(globs.myX[i])
-                                          + globs.myY[j]
-                                          - 0.5*nu*nu*globs.myTimeline[g] )
-                                    );
-            globs.myVarY[i][j] = exp(2.0*(  alpha*log(globs.myX[i])
-                                          + globs.myY[j]
-                                          - 0.5*nu*nu*globs.myTimeline[g] )
-                                    ); // nu*nu
+  for( unsigned o = 0; o < outer; ++ o )
+        {
+          for(unsigned i=0;i<globs[o].myX.size();++i)
+            for(unsigned j=0;j<globs[o].myY.size();++j) {
+              globs[o].myVarX[i][j] = exp(2.0*(  beta*log(globs[o].myX[i])
+                                              + globs[o].myY[j]
+                                              - 0.5*nu*nu*globs[o].myTimeline[g] )
+                                       );
+              globs[o].myVarY[i][j] = exp(2.0*(  alpha*log(globs[o].myX[i])
+                                              + globs[o].myY[j]
+                                              - 0.5*nu*nu*globs[o].myTimeline[g] )
+                                       ); // nu*nu
+            }
         }
 
 }
@@ -218,10 +221,11 @@ void   run_OrigCPU(
 
   for(int g = numT-2;g>=0;--g)
     {
+      
+      updateParams(g,alpha,beta,nu,globals, outer);
 #pragma omp parallel for default(shared) schedule(static) if(outer>8)
       for( unsigned i = 0; i < outer; ++ i )
         {
-          updateParams(g,alpha,beta,nu,globals[i], outer);
           rollback(g, globals[i]);
         }
     }
