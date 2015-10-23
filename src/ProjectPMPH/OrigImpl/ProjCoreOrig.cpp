@@ -2,7 +2,7 @@
 #include "Constants.h"
 
 
-void updateParams(const unsigned g, const REAL alpha, const REAL beta, const REAL nu, PrivGlobs& globs)
+void updateParams(const unsigned g, const REAL alpha, const REAL beta, const REAL nu, PrivGlobs globs, const int outer)
 {
     for(unsigned i=0;i<globs.myX.size();++i)
         for(unsigned j=0;j<globs.myY.size();++j) {
@@ -15,6 +15,7 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta, const REA
                                           - 0.5*nu*nu*globs.myTimeline[g] )
                                     ); // nu*nu
         }
+
 }
 
 void setPayoff(const REAL strike, PrivGlobs& globs )
@@ -165,30 +166,32 @@ rollback( const unsigned g, PrivGlobs& globs ) {
     }
 }
 
-REAL   value(   PrivGlobs    globs,
-                const REAL s0,
-                const REAL strike,
-                const REAL t,
-                const REAL alpha,
-                const REAL nu,
-                const REAL beta,
-                const unsigned int numX,
-                const unsigned int numY,
-                const unsigned int numT
-) {
-    // initGrid(s0,alpha,nu,t, numX, numY, numT, globs);
-    // initOperator(globs.myX,globs.myDxx);
-    // initOperator(globs.myY,globs.myDyy);
+// REAL   value(   PrivGlobs    globs,
+//                 const REAL s0,
+//                 const REAL strike,
+//                 const REAL t,
+//                 const REAL alpha,
+//                 const REAL nu,
+//                 const REAL beta,
+//                 const unsigned int numX,
+//                 const unsigned int numY,
+//                 const unsigned int numT
+// ) {
+//     initGrid(s0,alpha,nu,t, numX, numY, numT, globs);
+//     initOperator(globs.myX,globs.myDxx);
+//     initOperator(globs.myY,globs.myDyy);
 
-    setPayoff(strike, globs);
-    for(int i = globs.myTimeline.size()-2;i>=0;--i)
-    {
-        updateParams(i,alpha,beta,nu,globs);
-        rollback(i, globs);
-    }
+//     setPayoff(strike, globs);
 
-    return globs.myResult[globs.myXindex][globs.myYindex];
-}
+//   for(int i = numT-2;i>=0;--i)
+//    {
+//      updateParams(i,alpha,beta,nu,globs);
+//      rollback(i, globs);
+//    }
+
+
+//     return globs.myResult[globs.myXindex][globs.myYindex];
+// }
 
 void   run_OrigCPU(
                 const unsigned int&   outer,
@@ -209,18 +212,22 @@ void   run_OrigCPU(
     initOperator(globals[i].myX,globals[i].myDxx);
     initOperator(globals[i].myY,globals[i].myDyy);
 
-    //    setPayoff(strike, globals[i]);
+    setPayoff(0.001 * i, globals[i]);
   }
 
+
+  for(int g = numT-2;g>=0;--g)
+    {
 #pragma omp parallel for default(shared) schedule(static) if(outer>8)
-  for( unsigned i = 0; i < outer; ++ i ) {
-    REAL strike;
-    PrivGlobs globs = globals[i];
-    strike = 0.001*i;
-    res[i] = value( globs, s0, strike, t,
-                    alpha, nu,    beta,
-                    numX,  numY,  numT );
+      for( unsigned i = 0; i < outer; ++ i )
+        {
+          updateParams(g,alpha,beta,nu,globals[i], outer);
+          rollback(g, globals[i]);
+        }
     }
+  for (unsigned int i = 0; i < outer; i++) {
+    res[i] = globals[i].myResult[globals[i].myXindex][globals[i].myYindex];
+  }
 }
 
 //#endif // PROJ_CORE_ORIG
