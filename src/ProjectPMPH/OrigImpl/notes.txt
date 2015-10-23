@@ -15,3 +15,5 @@ rollback:
            Merged implicit and explicit loops.
 value:
     gone
+updateParams:
+    Distributed "outer" loop against function.
