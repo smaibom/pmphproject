@@ -1,5 +1,7 @@
 OrigCPU:
+    Privatized global arrays.
     Added OpenMP to outer loop.
+    Nest interchange on outer and timeline loops.
 setPayoff:
     Privatized variable "payoff" with array expansion.
     Distributed loop with payoff array calculation.
@@ -11,3 +13,5 @@ rollback:
            Loop interchange in explicit x/y.
            Privatized a, b, and c.
            Merged implicit and explicit loops.
+value:
+    gone
