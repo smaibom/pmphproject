@@ -15,6 +15,7 @@ struct PrivGlobs {
   unsigned int numX;
   unsigned int numY;
   unsigned int numT;
+  unsigned int numM; // size of the expanded matrices
 
   //	grid
   REAL*        myX;        // [numX]
@@ -24,11 +25,11 @@ struct PrivGlobs {
   unsigned            myYindex;
 
   //	variable
-  REAL*   myResult; // [numX][numY]
+  REAL*   myResult; // [outer][numX][numY]
 
   //	coeffs
-  REAL*   myVarX; // [numX][numY]
-  REAL*   myVarY; // [numX][numY]
+  REAL*   myVarX; // [outer][numX][numY]
+  REAL*   myVarY; // [outer][numX][numY]
 
   //	operators
   REAL*  myDxx;  // [numX][4]
@@ -41,10 +42,12 @@ struct PrivGlobs {
 
   PrivGlobs(  const unsigned int& numX,
               const unsigned int& numY,
-              const unsigned int& numT) {
+              const unsigned int& numT,
+              const unsigned int& outer) {
     this->numX = numX;
     this->numY = numY;
     this->numT = numT;
+    this->numM = numX * numY;
     this->myX = (REAL*) malloc(sizeof(REAL) * numX);
     this->myDxx = (REAL*) malloc(sizeof(REAL) * numX * 4);
     this->myY  = (REAL*) malloc(sizeof(REAL) * numY);
@@ -53,9 +56,9 @@ struct PrivGlobs {
 
     this->myTimeline = (REAL*) malloc(sizeof(REAL) * numT);
 
-    this->  myVarX = (REAL*) malloc(sizeof(REAL) * numX * numY);
-    this->  myVarY = (REAL*) malloc(sizeof(REAL) * numX * numY);
-    this->myResult = (REAL*) malloc(sizeof(REAL) * numX * numY);
+    this->  myVarX = (REAL*) malloc(sizeof(REAL) * numX * numY * outer);
+    this->  myVarY = (REAL*) malloc(sizeof(REAL) * numX * numY * outer);
+    this->myResult = (REAL*) malloc(sizeof(REAL) * numX * numY * outer);
 
   }
 } __attribute__ ((aligned (128)));

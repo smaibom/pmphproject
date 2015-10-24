@@ -12,8 +12,8 @@
  * and also sets
  *   globs.myXindex and globs.myYindex (both scalars)
  */
-void initGrid(  const REAL s0, const REAL alpha, const REAL nu,const REAL t, 
-                const unsigned numX, const unsigned numY, const unsigned numT, PrivGlobs& globs   
+void initGrid(  const REAL s0, const REAL alpha, const REAL nu,const REAL t,
+                const unsigned numX, const unsigned numY, const unsigned numT, PrivGlobs& globs
 ) {
     for(unsigned i=0;i<numT;++i)
         globs.myTimeline[i] = t*i/(numT-1);
@@ -35,9 +35,9 @@ void initGrid(  const REAL s0, const REAL alpha, const REAL nu,const REAL t,
 
 /**
  * Fills in:
- *    Dx  [0..n-1][0..3] and 
- *    Dxx [0..n-1][0..3] 
- * Based on the values of x, 
+ *    Dx  [0..n-1][0..3] and
+ *    Dxx [0..n-1][0..3]
+ * Based on the values of x,
  * Where x's size is n.
  */
 void initOperator(  REAL* x,
@@ -51,12 +51,12 @@ void initOperator(  REAL* x,
 	//	lower boundary
 	dxl		 =  0.0;
 	dxu		 =  x[1] - x[0];
-	
+
 	Dxx[0 * 4 + 0] =  0.0;
 	Dxx[0 * 4 + 1] =  0.0;
 	Dxx[0 * 4 + 2] =  0.0;
     Dxx[0 * 4 + 3] =  0.0;
-	
+
 	//	standard case
 	for(unsigned i=1;i<n-1;i++)
 	{
@@ -66,7 +66,7 @@ void initOperator(  REAL* x,
 		Dxx[i * 4 + 0] =  2.0/dxl/(dxl+dxu);
 		Dxx[i * 4 + 1] = -2.0*(1.0/dxl + 1.0/dxu)/(dxl+dxu);
 		Dxx[i * 4 + 2] =  2.0/dxu/(dxl+dxu);
-        Dxx[i * 4 + 3] =  0.0; 
+        Dxx[i * 4 + 3] =  0.0;
 	}
 
 	//	upper boundary
