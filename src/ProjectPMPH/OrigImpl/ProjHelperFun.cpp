@@ -42,7 +42,7 @@ void initGrid(  const REAL s0, const REAL alpha, const REAL nu,const REAL t,
  */
 void initOperator(  REAL* x,
                     const unsigned int x_size,
-                    vector<vector<REAL> >& Dxx
+                    REAL* Dxx
 ) {
 	const unsigned n = x_size;
 
@@ -52,10 +52,10 @@ void initOperator(  REAL* x,
 	dxl		 =  0.0;
 	dxu		 =  x[1] - x[0];
 	
-	Dxx[0][0] =  0.0;
-	Dxx[0][1] =  0.0;
-	Dxx[0][2] =  0.0;
-    Dxx[0][3] =  0.0;
+	Dxx[0 * 4 + 0] =  0.0;
+	Dxx[0 * 4 + 1] =  0.0;
+	Dxx[0 * 4 + 2] =  0.0;
+    Dxx[0 * 4 + 3] =  0.0;
 	
 	//	standard case
 	for(unsigned i=1;i<n-1;i++)
@@ -63,20 +63,20 @@ void initOperator(  REAL* x,
 		dxl      = x[i]   - x[i-1];
 		dxu      = x[i+1] - x[i];
 
-		Dxx[i][0] =  2.0/dxl/(dxl+dxu);
-		Dxx[i][1] = -2.0*(1.0/dxl + 1.0/dxu)/(dxl+dxu);
-		Dxx[i][2] =  2.0/dxu/(dxl+dxu);
-        Dxx[i][3] =  0.0; 
+		Dxx[i * 4 + 0] =  2.0/dxl/(dxl+dxu);
+		Dxx[i * 4 + 1] = -2.0*(1.0/dxl + 1.0/dxu)/(dxl+dxu);
+		Dxx[i * 4 + 2] =  2.0/dxu/(dxl+dxu);
+        Dxx[i * 4 + 3] =  0.0; 
 	}
 
 	//	upper boundary
 	dxl		   =  x[n-1] - x[n-2];
 	dxu		   =  0.0;
 
-	Dxx[n-1][0] = 0.0;
-	Dxx[n-1][1] = 0.0;
-	Dxx[n-1][2] = 0.0;
-    Dxx[n-1][3] = 0.0;
+	Dxx[(n-1) * 4 + 0] = 0.0;
+	Dxx[(n-1) * 4 + 1] = 0.0;
+	Dxx[(n-1) * 4 + 2] = 0.0;
+    Dxx[(n-1) * 4 + 3] = 0.0;
 }
 
 

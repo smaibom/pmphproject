@@ -110,22 +110,22 @@ rollback( const unsigned g, PrivGlobs* globs, int outer, const int& numX,  const
     for(int j=0;j<numY;j++) {
       for(int i=0;i<numX;i++) {
         // implicit x
-        ax[o][j][i] =		 - 0.5*(0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i][0]);
-        bx[o][j][i] = dtInv - 0.5*(0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i][1]);
-        cx[o][j][i] =		 - 0.5*(0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i][2]);
+        ax[o][j][i] =		 - 0.5*(0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i * 4 + 0]);
+        bx[o][j][i] = dtInv - 0.5*(0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i * 4 + 1]);
+        cx[o][j][i] =		 - 0.5*(0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i * 4 + 2]);
 
 
         //	explicit x
         u[o][j][i] = dtInv*globs[o].myResult[i * numY + j];
 
         if(i > 0) {
-          u[o][j][i] += 0.5*( 0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i][0] )
+          u[o][j][i] += 0.5*( 0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i * 4 + 0] )
             * globs[o].myResult[(i-1) * numY + j];
         }
-        u[o][j][i]  +=  0.5*( 0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i][1] )
+        u[o][j][i]  +=  0.5*( 0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i * 4 + 1] )
           * globs[o].myResult[i * numY + j];
         if(i < numX-1) {
-          u[o][j][i] += 0.5*( 0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i][2] )
+          u[o][j][i] += 0.5*( 0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i * 4 + 2] )
             * globs[o].myResult[(i+1) * numY + j];
         }
       }
@@ -143,21 +143,21 @@ rollback( const unsigned g, PrivGlobs* globs, int outer, const int& numX,  const
           v[o][i][j] = 0.0;
 
           if(j > 0) {
-            v[o][i][j] +=  ( 0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j][0] )
+            v[o][i][j] +=  ( 0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j * 4 + 0] )
               *  globs[o].myResult[i * numY + j-1];
           }
-          v[o][i][j]  +=   ( 0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j][1] )
+          v[o][i][j]  +=   ( 0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j * 4 + 1] )
             *  globs[o].myResult[i  * numY + j];
           if(j < numY-1) {
-            v[o][i][j] +=  ( 0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j][2] )
+            v[o][i][j] +=  ( 0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j * 4 + 2] )
               *  globs[o].myResult[i * numY + j+1];
           }
           u[o][j][i] += v[o][i][j];
 
           // Implicit y
-          ay[o][i][j] =		 - 0.5*(0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j][0]);
-          by[o][i][j] = dtInv - 0.5*(0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j][1]);
-          cy[o][i][j] =		 - 0.5*(0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j][2]);
+          ay[o][i][j] =		 - 0.5*(0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j * 4 + 0]);
+          by[o][i][j] = dtInv - 0.5*(0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j * 4 + 1]);
+          cy[o][i][j] =		 - 0.5*(0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j * 4 + 2]);
 
         }
     }
@@ -208,7 +208,7 @@ void   run_OrigCPU(
     globals[i] = PrivGlobs(numX, numY, numT);
     initGrid(s0,alpha,nu,t, numX, numY, numT, globals[i]);
     initOperator(globals[i].myX, globals[i].numX, globals[i].myDxx);
-    initOperator(globals[i].myY, globals[i].numY,globals[i].myDyy);
+    initOperator(globals[i].myY, globals[i].numY, globals[i].myDyy);
 
     setPayoff(0.001 * i, globals[i]);
   }

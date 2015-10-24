@@ -31,8 +31,8 @@ struct PrivGlobs {
   REAL*   myVarY; // [numX][numY]
 
   //	operators
-  vector<vector<REAL> >   myDxx;  // [numX][4]
-  vector<vector<REAL> >   myDyy;  // [numY][4]
+  REAL*  myDxx;  // [numX][4]
+  REAL*  myDyy;  // [numY][4]
 
   PrivGlobs( ) {
     printf("Invalid Contructor: need to provide the array sizes! EXITING...!\n");
@@ -46,16 +46,10 @@ struct PrivGlobs {
     this->numY = numY;
     this->numT = numT;
     this->myX = (REAL*) malloc(sizeof(REAL) * numX);
-    this->myDxx.resize(numX);
-    for(int k=0; k<numX; k++) {
-      this->myDxx[k].resize(4);
-    }
-
+    this->myDxx = (REAL*) malloc(sizeof(REAL) * numX * 4);
     this->myY  = (REAL*) malloc(sizeof(REAL) * numY);
-    this->myDyy.resize(numY);
-    for(int k=0; k<numY; k++) {
-      this->myDyy[k].resize(4);
-    }
+
+    this->myDyy = (REAL*) malloc(sizeof(REAL) * numY * 4);
 
     this->myTimeline = (REAL*) malloc(sizeof(REAL) * numT);
 
@@ -73,7 +67,7 @@ void initGrid(  const REAL s0, const REAL alpha, const REAL nu,const REAL t,
 
 void initOperator(  REAL* x,
                     const unsigned int x_size,
-                    vector<vector<REAL> >& Dxx
+                    REAL* Dxx
                  );
 
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, const REAL nu, PrivGlobs& globs);
