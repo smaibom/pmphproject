@@ -88,25 +88,25 @@ void rollback( const unsigned g, PrivGlobs& globs );
 
 REAL   value(   PrivGlobs    globs,
                 const REAL s0,
-                const REAL strike, 
-                const REAL t, 
-                const REAL alpha, 
-                const REAL nu, 
+                const REAL strike,
+                const REAL t,
+                const REAL alpha,
+                const REAL nu,
                 const REAL beta,
                 const unsigned int numX,
                 const unsigned int numY,
                 const unsigned int numT
             );
 
-void run_OrigCPU(  
+void run_OrigCPU(
                 const unsigned int&   outer,
                 const unsigned int&   numX,
                 const unsigned int&   numY,
                 const unsigned int&   numT,
                 const REAL&           s0,
-                const REAL&           t, 
-                const REAL&           alpha, 
-                const REAL&           nu, 
+                const REAL&           t,
+                const REAL&           alpha,
+                const REAL&           nu,
                 const REAL&           beta,
                       REAL*           res   // [outer] RESULT
             );
