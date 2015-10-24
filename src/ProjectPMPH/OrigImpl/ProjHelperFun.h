@@ -27,8 +27,8 @@ struct PrivGlobs {
   REAL*   myResult; // [numX][numY]
 
   //	coeffs
-  vector<vector<REAL> >   myVarX; // [numX][numY]
-  vector<vector<REAL> >   myVarY; // [numX][numY]
+  REAL*   myVarX; // [numX][numY]
+  REAL*   myVarY; // [numX][numY]
 
   //	operators
   vector<vector<REAL> >   myDxx;  // [numX][4]
@@ -59,13 +59,9 @@ struct PrivGlobs {
 
     this->myTimeline = (REAL*) malloc(sizeof(REAL) * numT);
 
-    this->  myVarX.resize(numX);
-    this->  myVarY.resize(numX);
+    this->  myVarX = (REAL*) malloc(sizeof(REAL) * numX * numY);
+    this->  myVarY = (REAL*) malloc(sizeof(REAL) * numX * numY);
     this->myResult = (REAL*) malloc(sizeof(REAL) * numX * numY);
-    for(unsigned i=0;i<numX;++i) {
-      this->  myVarX[i].resize(numY);
-      this->  myVarY[i].resize(numY);
-    }
 
   }
 } __attribute__ ((aligned (128)));

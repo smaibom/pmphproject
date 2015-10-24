@@ -12,13 +12,13 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta, const REA
             {
               for(unsigned j=0;j<globs[o].numY;++j)
                 {
-                  globs[o].myVarX[i][j] = exp(2.0*(  beta*log(globs[o].myX[i])
-                                                     + globs[o].myY[j]
-                                                     - 0.5*nu*nu*globs[o].myTimeline[g] )
+                  globs[o].myVarX[i * globs[o].numY + j] = exp(2.0*(  beta*log(globs[o].myX[i])
+                                                                      + globs[o].myY[j]
+                                                                      - 0.5*nu*nu*globs[o].myTimeline[g] )
                                               );
-                  globs[o].myVarY[i][j] = exp(2.0*(  alpha*log(globs[o].myX[i])
-                                                     + globs[o].myY[j]
-                                                     - 0.5*nu*nu*globs[o].myTimeline[g] )
+                  globs[o].myVarY[i * globs[o].numY + j] = exp(2.0*(  alpha*log(globs[o].myX[i])
+                                                                      + globs[o].myY[j]
+                                                                      - 0.5*nu*nu*globs[o].myTimeline[g] )
                                               ); // nu*nu
                 }
             }
@@ -110,22 +110,22 @@ rollback( const unsigned g, PrivGlobs* globs, int outer, const int& numX,  const
     for(int j=0;j<numY;j++) {
       for(int i=0;i<numX;i++) {
         // implicit x
-        ax[o][j][i] =		 - 0.5*(0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][0]);
-        bx[o][j][i] = dtInv - 0.5*(0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][1]);
-        cx[o][j][i] =		 - 0.5*(0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][2]);
+        ax[o][j][i] =		 - 0.5*(0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i][0]);
+        bx[o][j][i] = dtInv - 0.5*(0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i][1]);
+        cx[o][j][i] =		 - 0.5*(0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i][2]);
 
 
         //	explicit x
         u[o][j][i] = dtInv*globs[o].myResult[i * numY + j];
 
         if(i > 0) {
-          u[o][j][i] += 0.5*( 0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][0] )
+          u[o][j][i] += 0.5*( 0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i][0] )
             * globs[o].myResult[(i-1) * numY + j];
         }
-        u[o][j][i]  +=  0.5*( 0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][1] )
+        u[o][j][i]  +=  0.5*( 0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i][1] )
           * globs[o].myResult[i * numY + j];
         if(i < numX-1) {
-          u[o][j][i] += 0.5*( 0.5*globs[o].myVarX[i][j]*globs[o].myDxx[i][2] )
+          u[o][j][i] += 0.5*( 0.5*globs[o].myVarX[i * numY + j]*globs[o].myDxx[i][2] )
             * globs[o].myResult[(i+1) * numY + j];
         }
       }
@@ -143,21 +143,21 @@ rollback( const unsigned g, PrivGlobs* globs, int outer, const int& numX,  const
           v[o][i][j] = 0.0;
 
           if(j > 0) {
-            v[o][i][j] +=  ( 0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][0] )
+            v[o][i][j] +=  ( 0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j][0] )
               *  globs[o].myResult[i * numY + j-1];
           }
-          v[o][i][j]  +=   ( 0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][1] )
+          v[o][i][j]  +=   ( 0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j][1] )
             *  globs[o].myResult[i  * numY + j];
           if(j < numY-1) {
-            v[o][i][j] +=  ( 0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][2] )
+            v[o][i][j] +=  ( 0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j][2] )
               *  globs[o].myResult[i * numY + j+1];
           }
           u[o][j][i] += v[o][i][j];
 
           // Implicit y
-          ay[o][i][j] =		 - 0.5*(0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][0]);
-          by[o][i][j] = dtInv - 0.5*(0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][1]);
-          cy[o][i][j] =		 - 0.5*(0.5*globs[o].myVarY[i][j]*globs[o].myDyy[j][2]);
+          ay[o][i][j] =		 - 0.5*(0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j][0]);
+          by[o][i][j] = dtInv - 0.5*(0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j][1]);
+          cy[o][i][j] =		 - 0.5*(0.5*globs[o].myVarY[i * numY + j]*globs[o].myDyy[j][2]);
 
         }
     }
