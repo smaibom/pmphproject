@@ -15,6 +15,7 @@ struct PrivGlobs {
   unsigned int numX;
   unsigned int numY;
   unsigned int numT;
+  unsigned int numM; // size of the expanded matrices
 
   //	grid
   REAL*        myX;        // [numX]
@@ -24,15 +25,15 @@ struct PrivGlobs {
   unsigned            myYindex;
 
   //	variable
-  REAL*   myResult; // [numX][numY]
+  REAL*   myResult; // [outer][numX][numY]
 
   //	coeffs
-  vector<vector<REAL> >   myVarX; // [numX][numY]
-  vector<vector<REAL> >   myVarY; // [numX][numY]
+  REAL*   myVarX; // [outer][numX][numY]
+  REAL*   myVarY; // [outer][numX][numY]
 
   //	operators
-  vector<vector<REAL> >   myDxx;  // [numX][4]
-  vector<vector<REAL> >   myDyy;  // [numY][4]
+  REAL*  myDxx;  // [numX][4]
+  REAL*  myDyy;  // [numY][4]
 
   PrivGlobs( ) {
     printf("Invalid Contructor: need to provide the array sizes! EXITING...!\n");
@@ -41,31 +42,23 @@ struct PrivGlobs {
 
   PrivGlobs(  const unsigned int& numX,
               const unsigned int& numY,
-              const unsigned int& numT) {
+              const unsigned int& numT,
+              const unsigned int& outer) {
     this->numX = numX;
     this->numY = numY;
     this->numT = numT;
+    this->numM = numX * numY;
     this->myX = (REAL*) malloc(sizeof(REAL) * numX);
-    this->myDxx.resize(numX);
-    for(int k=0; k<numX; k++) {
-      this->myDxx[k].resize(4);
-    }
-
+    this->myDxx = (REAL*) malloc(sizeof(REAL) * numX * 4);
     this->myY  = (REAL*) malloc(sizeof(REAL) * numY);
-    this->myDyy.resize(numY);
-    for(int k=0; k<numY; k++) {
-      this->myDyy[k].resize(4);
-    }
+
+    this->myDyy = (REAL*) malloc(sizeof(REAL) * numY * 4);
 
     this->myTimeline = (REAL*) malloc(sizeof(REAL) * numT);
 
-    this->  myVarX.resize(numX);
-    this->  myVarY.resize(numX);
-    this->myResult = (REAL*) malloc(sizeof(REAL) * numX * numY);
-    for(unsigned i=0;i<numX;++i) {
-      this->  myVarX[i].resize(numY);
-      this->  myVarY[i].resize(numY);
-    }
+    this->  myVarX = (REAL*) malloc(sizeof(REAL) * numX * numY * outer);
+    this->  myVarY = (REAL*) malloc(sizeof(REAL) * numX * numY * outer);
+    this->myResult = (REAL*) malloc(sizeof(REAL) * numX * numY * outer);
 
   }
 } __attribute__ ((aligned (128)));
@@ -77,7 +70,7 @@ void initGrid(  const REAL s0, const REAL alpha, const REAL nu,const REAL t,
 
 void initOperator(  REAL* x,
                     const unsigned int x_size,
-                    vector<vector<REAL> >& Dxx
+                    REAL* Dxx
                  );
 
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, const REAL nu, PrivGlobs& globs);
@@ -98,25 +91,25 @@ void rollback( const unsigned g, PrivGlobs& globs );
 
 REAL   value(   PrivGlobs    globs,
                 const REAL s0,
-                const REAL strike, 
-                const REAL t, 
-                const REAL alpha, 
-                const REAL nu, 
+                const REAL strike,
+                const REAL t,
+                const REAL alpha,
+                const REAL nu,
                 const REAL beta,
                 const unsigned int numX,
                 const unsigned int numY,
                 const unsigned int numT
             );
 
-void run_OrigCPU(  
+void run_OrigCPU(
                 const unsigned int&   outer,
                 const unsigned int&   numX,
                 const unsigned int&   numY,
                 const unsigned int&   numT,
                 const REAL&           s0,
-                const REAL&           t, 
-                const REAL&           alpha, 
-                const REAL&           nu, 
+                const REAL&           t,
+                const REAL&           alpha,
+                const REAL&           nu,
                 const REAL&           beta,
                       REAL*           res   // [outer] RESULT
             );
