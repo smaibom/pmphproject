@@ -145,19 +145,19 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
       for(j=0;j<numY;j++)
         {
           // Explicit y
-          v[o][i][j] = 0.0;
+          v[o * numX * numY + i * numY + j] = 0.0;
 
           if(j > 0) {
-            v[o][i][j] +=  ( 0.5*globs.myVarY[o * numM + i * numY + j]*globs.myDyy[j * 4 + 0] )
+            v[o * numX * numY + i * numY + j] +=  ( 0.5*globs.myVarY[o * numM + i * numY + j]*globs.myDyy[j * 4 + 0] )
               *  globs.myResult[o * numM + i * numY + j-1];
           }
-          v[o][i][j]  +=   ( 0.5*globs.myVarY[o * numM + i * numY + j]*globs.myDyy[j * 4 + 1] )
+          v[o * numX * numY + i * numY + j]  +=   ( 0.5*globs.myVarY[o * numM + i * numY + j]*globs.myDyy[j * 4 + 1] )
             *  globs.myResult[o * numM + i  * numY + j];
           if(j < numY-1) {
-            v[o][i][j] +=  ( 0.5*globs.myVarY[o * numM + i * numY + j]*globs.myDyy[j * 4 + 2] )
+            v[o * numX * numY + i * numY + j] +=  ( 0.5*globs.myVarY[o * numM + i * numY + j]*globs.myDyy[j * 4 + 2] )
               *  globs.myResult[o * numM + i * numY + j+1];
           }
-          u[o * numX * numY + j * numX + i] += v[o][i][j];
+          u[o * numX * numY + j * numX + i] += v[o * numX * numY + i * numY + j];
 
           // Implicit y
           ay[o * numZ * numZ + i * numZ + j] =		 - 0.5*(0.5*globs.myVarY[o * numM + i * numY + j]*globs.myDyy[j * 4 + 0]);
@@ -183,7 +183,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
     REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
     for(int i=0;i<numX;i++) {
       for(int j=0;j<numY;j++) {  // here a, b, c should have size [numY]
-        y[o][i][j] = dtInv*u[o * numX * numY + j * numX + i] - 0.5*v[o][i][j];
+        y[o][i][j] = dtInv*u[o * numX * numY + j * numX + i] - 0.5*v[o * numX * numY + i * numY + j];
       }
     }
   }
