@@ -47,7 +47,7 @@ inline void tridag(
     const REAL*   r,   // size [n]
     const int             n,
           REAL*   u,   // size [n]
-          vector<REAL>&   uu   // size [n] temporary
+          REAL*   uu   // size [n] temporary
 ) {
     int    i, offset;
     REAL   beta;
@@ -85,8 +85,8 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
   unsigned numM = numX * numY;
 
   REAL* u = (REAL*) malloc(sizeof(REAL) * outer * numY * numX);   // [outer][numY][numX]
-  vector<vector<vector<REAL> > > v(outer, vector<vector<REAL> > (numX, vector<REAL>(numY)));   // [outer][numX][numY]
-
+  //vector<vector<vector<REAL> > > v(outer, vector<vector<REAL> > (numX, vector<REAL>(numY)));   // [outer][numX][numY]
+  REAL* v = (REAL*) malloc(sizeof(REAL) * outer * numX * numY);
   //vector<vector<vector<REAL> > > ax(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
   REAL* ax = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ);
   //vector<vector<vector<REAL> > > bx(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
@@ -101,8 +101,8 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
   REAL* cy = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ);  
 
   vector<vector<vector<REAL> > > y(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
-  vector<vector<REAL> > yy(outer, vector<REAL>(numZ));  // temporary used in tridag  // [outer][max(numX,numY)]
-
+  //vector<vector<REAL> > yy(outer, vector<REAL>(numZ));  // temporary used in tridag  // [outer][max(numX,numY)]
+  REAL* yy = (REAL*) malloc(sizeof(REAL)*outer*numZ);
 
 
 
@@ -171,7 +171,9 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
   for(int o = 0; o < outer; o++) {
     for(int j=0;j<numY;j++) {
       // here yy should have size [numX]
-      tridag(&ax[o * numZ * numZ + j * numZ],&bx[o * numZ * numZ + j * numZ],&cx[o * numZ * numZ + j * numZ], &u[o * numX * numY + j * numX], numX, &u[o * numX * numY + numX * j], yy[o]);
+      tridag(&ax[o * numZ * numZ + j * numZ],&bx[o * numZ * numZ + j * numZ],
+             &cx[o * numZ * numZ + j * numZ], &u[o * numX * numY + j * numX], 
+             numX, &u[o * numX * numY + numX * j], &yy[o*numZ]);
     }
   }
 
@@ -189,7 +191,9 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
   for(int o = 0; o < outer; o++) {
     for(int i=0;i<numX;i++) {
       // here yy should have size [numY]
-      tridag(&ay[o * numZ * numZ + i * numZ],&by[o * numZ * numZ + i * numZ],&cy[o * numZ * numZ + i * numZ],y[o][i].data() ,numY, &globs.myResult[o * numM + i * numY],yy[o]);
+      tridag(&ay[o * numZ * numZ + i * numZ],&by[o * numZ * numZ + i * numZ],
+             &cy[o * numZ * numZ + i * numZ],y[o][i].data() ,numY, 
+             &globs.myResult[o * numM + i * numY],&yy[o*numZ]);
     }
   }
   free(u);
@@ -199,6 +203,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
   free(by);
   free(cx);
   free(cy);
+  free(yy);
 }
 
 
