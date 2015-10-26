@@ -100,7 +100,8 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
   //vector<vector<vector<REAL> > > cy(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
   REAL* cy = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ);  
 
-  vector<vector<vector<REAL> > > y(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
+  //vector<vector<vector<REAL> > > y(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
+  REAL* y = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ);
   //vector<vector<REAL> > yy(outer, vector<REAL>(numZ));  // temporary used in tridag  // [outer][max(numX,numY)]
   REAL* yy = (REAL*) malloc(sizeof(REAL)*outer*numZ);
 
@@ -183,7 +184,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
     REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
     for(int i=0;i<numX;i++) {
       for(int j=0;j<numY;j++) {  // here a, b, c should have size [numY]
-        y[o][i][j] = dtInv*u[o * numX * numY + j * numX + i] - 0.5*v[o * numX * numY + i * numY + j];
+        y[o * numZ * numZ + i * numZ +j] = dtInv*u[o * numX * numY + j * numX + i] - 0.5*v[o * numX * numY + i * numY + j];
       }
     }
   }
@@ -192,7 +193,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
     for(int i=0;i<numX;i++) {
       // here yy should have size [numY]
       tridag(&ay[o * numZ * numZ + i * numZ],&by[o * numZ * numZ + i * numZ],
-             &cy[o * numZ * numZ + i * numZ],y[o][i].data() ,numY, 
+             &cy[o * numZ * numZ + i * numZ],&y[o * numZ * numZ + i * numZ],numY, 
              &globs.myResult[o * numM + i * numY],&yy[o*numZ]);
     }
   }
@@ -204,6 +205,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
   free(cx);
   free(cy);
   free(yy);
+  free(y);
 }
 
 
