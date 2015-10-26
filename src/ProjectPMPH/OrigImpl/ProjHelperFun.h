@@ -11,18 +11,20 @@ using namespace std;
 
 
 struct PrivGlobs {
-
+  // Array dimensions
   unsigned int numX;
   unsigned int numY;
+  unsigned int numT;
+
   //	grid
   REAL*        myX;        // [numX]
   REAL*        myY;        // [numY]
-  vector<REAL>        myTimeline; // [numT]
+  REAL*        myTimeline; // [numT]
   unsigned            myXindex;
   unsigned            myYindex;
 
   //	variable
-  vector<vector<REAL> >   myResult; // [numX][numY]
+  REAL*   myResult; // [numX][numY]
 
   //	coeffs
   vector<vector<REAL> >   myVarX; // [numX][numY]
@@ -42,6 +44,7 @@ struct PrivGlobs {
               const unsigned int& numT) {
     this->numX = numX;
     this->numY = numY;
+    this->numT = numT;
     this->myX = (REAL*) malloc(sizeof(REAL) * numX);
     this->myDxx.resize(numX);
     for(int k=0; k<numX; k++) {
@@ -54,15 +57,14 @@ struct PrivGlobs {
       this->myDyy[k].resize(4);
     }
 
-    this->myTimeline.resize(numT);
+    this->myTimeline = (REAL*) malloc(sizeof(REAL) * numT);
 
     this->  myVarX.resize(numX);
     this->  myVarY.resize(numX);
-    this->myResult.resize(numX);
+    this->myResult = (REAL*) malloc(sizeof(REAL) * numX * numY);
     for(unsigned i=0;i<numX;++i) {
       this->  myVarX[i].resize(numY);
       this->  myVarY[i].resize(numY);
-      this->myResult[i].resize(numY);
     }
 
   }
