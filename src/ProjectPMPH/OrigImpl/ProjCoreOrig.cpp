@@ -22,7 +22,10 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
                 }
             }
         }
-
+  REAL* myVarXNew = (REAL*) malloc(sizeof(REAL) * globs.numX * globs.numY * outer);
+  transpose(globs.myVarX,myVarXNew,globs.numX,globs.numY,outer);
+  free(globs.myVarX);
+  globs.myVarX = myVarXNew;
 }
 
 void setPayoff(PrivGlobs& globs, unsigned int outer)
@@ -104,37 +107,31 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
       {
         // implicit x
         ax[o * numZ * numZ + j * numZ + i] = 
-          -0.5*(0.5*globs.myVarX[o * numM + i * numY + j]
+          -0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
                    *globs.myDxx[i * 4 + 0]);
-        
         bx[o * numZ * numZ + j * numZ + i] = 
-          dtInv - 0.5*(0.5*globs.myVarX[o * numM + i * numY + j]
+          dtInv - 0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
                           *globs.myDxx[i * 4 + 1]);
-
         cx[o * numZ * numZ + j * numZ + i] =
-          -0.5*(0.5*globs.myVarX[o * numM + i * numY + j]
+          -0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
                    *globs.myDxx[i * 4 + 2]);
-
         //	explicit x
         u[o * numX * numY + j * numX + i] = 
           dtInv*globs.myResult[o * numM + i * numY + j];
-
         if(i > 0) 
         {
           u[o * numX * numY + j * numX + i] += 
-            0.5*(0.5*globs.myVarX[o * numM + i * numY + j]
+            0.5*(0.5*globs.myVarX[o * numM + + j * numX + i]
                     *globs.myDxx[i * 4 + 0])
                     *globs.myResult[o * numM + (i-1) * numY + j];
         }
-
         u[o * numX * numY + j * numX + i]  +=  
-          0.5*(0.5*globs.myVarX[o * numM + i * numY + j]*globs.myDxx[i * 4 + 1])
+          0.5*(0.5*globs.myVarX[o * numM + + j * numX + i]*globs.myDxx[i * 4 + 1])
                   *globs.myResult[o * numM + i * numY + j];
-
         if(i < numX-1) 
         {
           u[o * numX * numY + j * numX + i] += 
-            0.5*(0.5*globs.myVarX[o * numM + i * numY + j]
+            0.5*(0.5*globs.myVarX[o * numM + + j * numX + i]
                     *globs.myDxx[i * 4 + 2])
                     *globs.myResult[o * numM + (i+1) * numY + j];
         }
@@ -153,7 +150,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
         {
           // Explicit y
           v[o * numX * numY + i * numY + j] = 0.0;
-
           if(j > 0) 
           {
             v[o * numX * numY + i * numY + j] +=  
@@ -174,20 +170,16 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
                   *globs.myResult[o * numM + i * numY + j+1];
           }
           u[o * numX * numY + j * numX + i] += v[o * numX * numY + i * numY + j];
-
           // Implicit y
           ay[o * numZ * numZ + i * numZ + j] =
             -0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
                      *globs.myDyy[j * 4 + 0]);
-
           by[o * numZ * numZ + i * numZ + j] = 
             dtInv - 0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
                             *globs.myDyy[j * 4 + 1]);
-          
           cy[o * numZ * numZ + i * numZ + j] =
             -0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
                      *globs.myDyy[j * 4 + 2]);
-
         }
     }
   }
@@ -242,18 +234,11 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
 
 
-void   run_OrigCPU(
-                const unsigned int&   outer,
-                const unsigned int&   numX,
-                const unsigned int&   numY,
-                const unsigned int&   numT,
-                const REAL&           s0,
-                const REAL&           t,
-                const REAL&           alpha,
-                const REAL&           nu,
-                const REAL&           beta,
-                      REAL*           res   // [outer] RESULT
-                   ) {
+void   run_OrigCPU(const unsigned int& outer,const unsigned int& numX,
+                   const unsigned int& numY,const unsigned int& numT,
+                   const REAL& s0,const REAL& t,const REAL& alpha,
+                   const REAL& nu,const REAL& beta,REAL* res) // [outer] RESULT
+{
   PrivGlobs globals(numX, numY, numT, outer);
   initGrid(s0,alpha,nu,t, numX, numY, numT, globals);
   initOperator(globals.myX, globals.numX, globals.myDxx);

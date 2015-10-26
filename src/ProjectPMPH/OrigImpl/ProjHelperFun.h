@@ -72,6 +72,7 @@ void initOperator(  REAL* x,
                     const unsigned int x_size,
                     REAL* Dxx
                  );
+void transpose(REAL*,REAL*,int,int,int);
 
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, const REAL nu, PrivGlobs& globs);
 
