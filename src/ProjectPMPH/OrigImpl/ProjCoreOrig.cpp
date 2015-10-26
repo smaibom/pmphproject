@@ -1,5 +1,6 @@
 #include "ProjHelperFun.h"
 #include "Constants.h"
+#include "TridagPar.h"
 
 
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, const REAL nu, PrivGlobs& globs, const int outer)
@@ -85,24 +86,14 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
   unsigned numM = numX * numY;
 
   REAL* u = (REAL*) malloc(sizeof(REAL) * outer * numY * numX);   // [outer][numY][numX]
-  //vector<vector<vector<REAL> > > v(outer, vector<vector<REAL> > (numX, vector<REAL>(numY)));   // [outer][numX][numY]
   REAL* v = (REAL*) malloc(sizeof(REAL) * outer * numX * numY);
-  //vector<vector<vector<REAL> > > ax(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
   REAL* ax = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ);
-  //vector<vector<vector<REAL> > > bx(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
   REAL* bx = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); 
-  //vector<vector<vector<REAL> > > cx(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
   REAL* cx = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); 
-  //vector<vector<vector<REAL> > > ay(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
   REAL* ay = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ);
-  //vector<vector<vector<REAL> > > by(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
   REAL* by = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ);
-  //vector<vector<vector<REAL> > > cy(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
   REAL* cy = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ);  
-
-  //vector<vector<vector<REAL> > > y(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
   REAL* y = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ);
-  //vector<vector<REAL> > yy(outer, vector<REAL>(numZ));  // temporary used in tridag  // [outer][max(numX,numY)]
   REAL* yy = (REAL*) malloc(sizeof(REAL)*outer*numZ);
 
 
@@ -172,7 +163,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
   for(int o = 0; o < outer; o++) {
     for(int j=0;j<numY;j++) {
       // here yy should have size [numX]
-      tridag(&ax[o * numZ * numZ + j * numZ],&bx[o * numZ * numZ + j * numZ],
+      tridagPar(&ax[o * numZ * numZ + j * numZ],&bx[o * numZ * numZ + j * numZ],
              &cx[o * numZ * numZ + j * numZ], &u[o * numX * numY + j * numX], 
              numX, &u[o * numX * numY + numX * j], &yy[o*numZ]);
     }
@@ -192,7 +183,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
   for(int o = 0; o < outer; o++) {
     for(int i=0;i<numX;i++) {
       // here yy should have size [numY]
-      tridag(&ay[o * numZ * numZ + i * numZ],&by[o * numZ * numZ + i * numZ],
+      tridagPar(&ay[o * numZ * numZ + i * numZ],&by[o * numZ * numZ + i * numZ],
              &cy[o * numZ * numZ + i * numZ],&y[o * numZ * numZ + i * numZ],numY, 
              &globs.myResult[o * numM + i * numY],&yy[o*numZ]);
     }
