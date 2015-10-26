@@ -41,7 +41,7 @@ void setPayoff(PrivGlobs& globs, unsigned int outer)
 }
 
 inline void tridag(
-    const vector<REAL>&   a,   // size [n]
+          REAL*   a,   // size [n]
     const vector<REAL>&   b,   // size [n]
     const vector<REAL>&   c,   // size [n]
     const REAL*   r,   // size [n]
@@ -87,10 +87,12 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
   REAL* u = (REAL*) malloc(sizeof(REAL) * outer * numY * numX);   // [outer][numY][numX]
   vector<vector<vector<REAL> > > v(outer, vector<vector<REAL> > (numX, vector<REAL>(numY)));   // [outer][numX][numY]
 
-  vector<vector<vector<REAL> > > ax(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
+  //vector<vector<vector<REAL> > > ax(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
+  REAL* ax = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ);
   vector<vector<vector<REAL> > > bx(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
   vector<vector<vector<REAL> > > cx(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
-  vector<vector<vector<REAL> > > ay(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
+  //vector<vector<vector<REAL> > > ay(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
+  REAL* ay = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ);
   vector<vector<vector<REAL> > > by(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
   vector<vector<vector<REAL> > > cy(outer, vector<vector<REAL> > (numZ, vector<REAL>(numZ)));   // [outer][max(numX,numY)][max(numX, numY)]
 
@@ -108,7 +110,8 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
     for(int j=0;j<numY;j++) {
       for(int i=0;i<numX;i++) {
         // implicit x
-        ax[o][j][i] =		 - 0.5*(0.5*globs.myVarX[o * numM + i * numY + j]*globs.myDxx[i * 4 + 0]);
+        ax[o * numZ * numZ + j * numZ + i] = -0.5*(0.5*globs.myVarX[o * numM + i * numY + j]*globs.myDxx[i * 4 + 0]);
+        //ax[o][j][i] =		 - 0.5*(0.5*globs.myVarX[o * numM + i * numY + j]*globs.myDxx[i * 4 + 0]);
         bx[o][j][i] = dtInv - 0.5*(0.5*globs.myVarX[o * numM + i * numY + j]*globs.myDxx[i * 4 + 1]);
         cx[o][j][i] =		 - 0.5*(0.5*globs.myVarX[o * numM + i * numY + j]*globs.myDxx[i * 4 + 2]);
 
@@ -153,7 +156,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
           u[o * numX * numY + j * numX + i] += v[o][i][j];
 
           // Implicit y
-          ay[o][i][j] =		 - 0.5*(0.5*globs.myVarY[o * numM + i * numY + j]*globs.myDyy[j * 4 + 0]);
+          ay[o * numZ * numZ + i * numZ + j] =		 - 0.5*(0.5*globs.myVarY[o * numM + i * numY + j]*globs.myDyy[j * 4 + 0]);
           by[o][i][j] = dtInv - 0.5*(0.5*globs.myVarY[o * numM + i * numY + j]*globs.myDyy[j * 4 + 1]);
           cy[o][i][j] =		 - 0.5*(0.5*globs.myVarY[o * numM + i * numY + j]*globs.myDyy[j * 4 + 2]);
 
@@ -164,7 +167,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
   for(int o = 0; o < outer; o++) {
     for(int j=0;j<numY;j++) {
       // here yy should have size [numX]
-      tridag(ax[o][j],bx[o][j],cx[o][j], &u[o * numX * numY + j * numX], numX, &u[o * numX * numY + numX * j], yy[o]);
+      tridag(&ax[o * numZ * numZ + j * numZ],bx[o][j],cx[o][j], &u[o * numX * numY + j * numX], numX, &u[o * numX * numY + numX * j], yy[o]);
     }
   }
 
@@ -182,9 +185,12 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,  const
   for(int o = 0; o < outer; o++) {
     for(int i=0;i<numX;i++) {
       // here yy should have size [numY]
-      tridag(ay[o][i],by[o][i],cy[o][i],y[o][i].data() ,numY, &globs.myResult[o * numM + i * numY],yy[o]);
+      tridag(&ay[o * numZ * numZ + i * numZ],by[o][i],cy[o][i],y[o][i].data() ,numY, &globs.myResult[o * numM + i * numY],yy[o]);
     }
   }
+  free(u);
+  free(ax);
+  free(ay);
 }
 
 
