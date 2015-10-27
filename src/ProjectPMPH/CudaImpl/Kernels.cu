@@ -1,4 +1,4 @@
-
+#include <iostream>
 __global__ void updateParamsKernel(const unsigned g, const REAL alpha, 
                                    const REAL beta, const REAL nu, REAL* myVarX
                                    REAL* myVarY, REAL* myY, REAL* myX, 
@@ -9,4 +9,15 @@ __global__ void updateParamsKernel(const unsigned g, const REAL alpha,
 
     myVarX[z*numM+i*numY+j] = exp(2.0*(beta*log(myX[i])+myY[j]-0.5*nu*nu*myTimeline[g]));
 
+}
+
+
+void test(){
+    std::cout << "nej\n";
+    std::cout << "nej\n";
+    std::cout << "nej\n";
+    std::cout << "nej\n";
+    std::cout << "nej\n";
+    std::cout << "nej\n";
+    std::cout << "nej\n";
 }
