@@ -96,7 +96,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   REAL* ay = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
   REAL* by = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
   REAL* cy = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
-  REAL* y = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numX][numY]
+  REAL* y = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
   REAL* yy = (REAL*) malloc(sizeof(REAL)*outer*numZ); // [outer][numZ]
 
 // X-loop
@@ -109,13 +109,13 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
       for(int i=0;i<numX;i++)
       {
         // implicit x
-        ax[o * numX * numY + j * numY + i] =
+        ax[o * numX * numY + j * numX + i] =
           -0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
                    *globs.myDxx[i * 4 + 0]);
-        bx[o * numX * numY + j * numY + i] =
+        bx[o * numX * numY + j * numX + i] =
           dtInv - 0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
                           *globs.myDxx[i * 4 + 1]);
-        cx[o * numX * numY + j * numY + i] =
+        cx[o * numX * numY + j * numX + i] =
           -0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
                    *globs.myDxx[i * 4 + 2]);
         //	explicit x
@@ -192,8 +192,8 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
     for(int j=0;j<numY;j++) 
       {
       // here yy should have size [numX]
-      tridagPar(&ax[o * numX * numY + j * numY],&bx[o * numX * numY + j * numY],
-                &cx[o * numX * numY + j * numY], &u[o * numX * numY + j * numX], 
+      tridagPar(&ax[o * numX * numY + j * numX],&bx[o * numX * numY + j * numX],
+                &cx[o * numX * numY + j * numX], &u[o * numX * numY + j * numX], 
                 numX, &u[o * numX * numY + numX * j], &yy[o*numZ]);
     }
   }
@@ -207,7 +207,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
     {
       for(int j=0;j<numY;j++) 
       {  // here a, b, c should have size [numY]
-        y[o * numZ * numZ + i * numZ +j] =
+        y[o * numX * numY + i * numY +j] =
           dtInv*u[o * numX * numY + j * numX + i]
            -0.5*v[o * numX * numY + i * numY + j];
       }
@@ -219,8 +219,8 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
     for(int i=0;i<numX;i++) 
     {
       // here yy should have size [numY]
-      tridagPar(&ay[o * numX * numY + i * numX],&by[o * numX * numY + i * numX],
-                &cy[o * numX * numY + i * numX],&y[o * numZ * numZ + i * numZ],
+      tridagPar(&ay[o * numX * numY + i * numY],&by[o * numX * numY + i * numY],
+                &cy[o * numX * numY + i * numY],&y[o * numX * numY + i * numY],
                 numY,&globs.myResult[o * numM + i * numY],&yy[o*numZ]);
     }
   }
