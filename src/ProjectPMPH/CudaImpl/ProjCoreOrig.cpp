@@ -2,18 +2,7 @@
 #include "Constants.h"
 #include "TridagPar.h"
 
-template<T>
-__global__ void updateParamsKernel(const unsigned g, const T alpha, const T beta,
-                                   const T nu,const int numO, const int numX,
-                                   const int numY, int numM,T* myVarX, T* myVarY,
-                                   T* myY, T* myX, T* myTimeline){
-  int i = threadIdx.y;
-  int j = threadIdx.x;
-  int o = threadIdx.z;
-  int ii = blockIdx.y*blockDim.y+i;
-  int jj = blockIdx.x*blockDim.x+j;
-  int oo = blockIdx.z*blockDim.z+o;
-}
+
 
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, 
                   const REAL nu, PrivGlobs& globs, const int outer)
