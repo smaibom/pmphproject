@@ -1,12 +1,10 @@
 #include "ProjHelperFun.h"
 #include "Constants.h"
 #include "TridagPar.h"
-#include "Kernels.cu"
 
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, 
                   const REAL nu, PrivGlobs& globs, const int outer)
 {
-  test();
   for( unsigned o = 0; o < outer; ++ o )
         {
           for(unsigned i=0;i<globs.numX;++i)
