@@ -1,0 +1,22 @@
+OrigCPU:
+    Privatized global arrays.
+    Added OpenMP to outer loop.
+    Nest interchange on outer and timeline loops.
+setPayoff:
+    Privatized variable "payoff" with array expansion.
+    Distributed loop with payoff array calculation.
+rollback:
+    Performed array expansion on u, v, (a/b/c)x/y, and yy.
+    moved outer loop into function.
+    distributed outer loop across all native rollback loops.
+    tridag loops:
+           Array expanded a,b,c, and y.
+           Performed loop distribution. (tridag in its own loop)
+    implicit/explicit x & y loops:
+           Loop interchange in explicit x/y.
+           Privatized a, b, and c.
+           Merged implicit and explicit loops.
+value:
+    gone
+updateParams:
+    Distributed "outer" loop against function.
