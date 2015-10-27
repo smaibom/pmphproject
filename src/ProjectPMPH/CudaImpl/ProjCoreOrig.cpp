@@ -7,7 +7,6 @@
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, 
                   const REAL nu, PrivGlobs& globs, const int outer)
 {
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for( unsigned o = 0; o < outer; ++ o )
         {
           for(unsigned i=0;i<globs.numX;++i)
@@ -98,7 +97,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   REAL* yy = (REAL*) malloc(sizeof(REAL)*outer*numZ); // [outer][numZ]
 
 // X-loop
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for (int o = 0; o < outer; o++) 
   {
     REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
@@ -139,7 +137,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
       }
     }
   }
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for (int o = 0; o < outer; o++) 
   {
     REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
@@ -184,7 +181,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
         }
     }
   }
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for(int o = 0; o < outer; o++) 
   {
     for(int j=0;j<numY;j++) 
@@ -197,7 +193,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   }
 
   //	implicit y
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for(int o = 0; o < outer; o++) 
   {
     REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
@@ -211,7 +206,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
       }
     }
   }
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for(int o = 0; o < outer; o++) 
   {
     for(int i=0;i<numX;i++) 
