@@ -13,7 +13,7 @@ EXECUTABLE  =runproject
 
 default: cpu
 
-ProjCoreOrig.o: ProjectCoreOrig.cu $(HELPERS)
+ProjCoreOrig.o: ProjCoreOrig.cu $(HELPERS)
 	$(CXX) $(CXXFLAGS) $(GPU_OPTS) $(INCLUDES) -c -o $@ $<
 
 cpp.o: $(SOURCES_CPP) $(HELPERS)
