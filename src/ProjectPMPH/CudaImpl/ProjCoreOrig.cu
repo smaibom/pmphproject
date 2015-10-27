@@ -7,9 +7,13 @@
 __global__ void updateParamsKernel(const unsigned g, const REAL alpha, 
                                    const REAL beta, const REAL nu, REAL* myVarX
                                    REAL* myVarY, REAL* myY, REAL* myX, 
-                                   REAL* myTimeline, const int numO, 
-                                   const int numM, const int numX, const int numY){
-  return;
+                                   REAL* myTimeline,const int numY, const int numM){
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    int z = blockIdx.z * blockDim.z + threadIdx.z;
+
+    myVarX[z*numM+i*numY+j] = exp(2.0*(beta*log(myX[i])+myY[j]-0.5*nu*nu*myTimeline[g]));
+
 }
 
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, 
@@ -21,9 +25,9 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
             {
               for(unsigned j=0;j<globs.numY;++j)
                 {
-                  globs.myVarX[o * globs.numM + i * globs.numY + j] = 
+                  /*globs.myVarX[o * globs.numM + i * globs.numY + j] = 
                     exp(2.0*(  beta*log(globs.myX[i])+ globs.myY[j]
-                        - 0.5*nu*nu*globs.myTimeline[g]));
+                        - 0.5*nu*nu*globs.myTimeline[g]));*/
                   globs.myVarY[o * globs.numM + i * globs.numY + j] = 
                     exp(2.0*(  alpha*log(globs.myX[i])+ globs.myY[j]
                         - 0.5*nu*nu*globs.myTimeline[g] )); // nu*nu
