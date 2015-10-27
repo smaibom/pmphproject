@@ -1,4 +1,4 @@
-CXX        = g++
+CXX        = nvcc
 LIB        = -L$(OPENCL_LIBDIR) -lOpenCL
 CXXFLAGS   = -fopenmp -O3 -DWITH_FLOATS=0
 
