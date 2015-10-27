@@ -79,50 +79,9 @@ inline void tridag(REAL* a,REAL* b,REAL* c,const REAL* r,const int n,
 }
 
 
-__global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, REAL* myDxx,
-                           REAL dtInv, int numX, int numY) {
-
-  int i = BLOCK_SIZE * blockIdx.x + threadIdx.x;
-  int j = BLOCK_SIZE * blockIdx.y + threadIdx.y;
-  int o = blockIdx.z;
-
-
-  ax[o * numX * numY + j * numX + i] = -0.5*(0.5*myVarX[o * numM + j * numX + i]*myDxx[i * 4 + 0]);
-
-  bx[o * numX * numY + j * numX + i] =
-    dtInv - 0.5*(0.5*myVarX[o * numM + j * numX + i]
-                 *myDxx[i * 4 + 1]);
-  cx[o * numX * numY + j * numX + i] =
-    -0.5*(0.5*myVarX[o * numM + j * numX + i]
-          *myDxx[i * 4 + 2]);
-  //	explicit x
-  u[o * numX * numY + j * numX + i] =
-    dtInv*myResult[o * numM + i * numY + j];
-
-  if(i > 0) {
-      u[o * numX * numY + j * numX + i] +=
-        0.5*(0.5*myVarX[o * numM + + j * numX + i]
-             *myDxx[i * 4 + 0])
-        *myResult[o * numM + (i-1) * numY + j];
-    }
-
-  u[o * numX * numY + j * numX + i]  +=
-    0.5*(0.5*myVarX[o * numM + + j * numX + i]*myDxx[i * 4 + 1])
-    *myResult[o * numM + i * numY + j];
-
-  if(i < numX-1) {
-      u[o * numX * numY + j * numX + i] +=
-        0.5*(0.5*myVarX[o * numM + + j * numX + i]
-             *myDxx[i * 4 + 2])
-        *myResult[o * numM + (i+1) * numY + j];
-    }
-
-
-}
-
 void
 rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX, 
-          const int& numY)
+          const int& numY) 
 {
   unsigned numZ = max(numX,numY);
   unsigned numM = numX * numY;
@@ -135,62 +94,39 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   REAL* ay = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
   REAL* by = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
   REAL* cy = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
-  REAL* y = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
+  REAL* y = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numZ][numZ]
   REAL* yy = (REAL*) malloc(sizeof(REAL)*outer*numZ); // [outer][numZ]
 
-  // Device memory
-  REAL* dax,* dbx,* dcx,* du,* dmyVarX, dmyDxx;
-  cudaMalloc((void**)&dax, outer * numX * numY * sizeof(REAL));
-  cudaMalloc((void**)&dbx, outer * numX * numY * sizeof(REAL));
-  cudaMalloc((void**)&dcx, outer * numX * numY * sizeof(REAL));
-  cudaMalloc((void**)&du, outer * numX * numY * sizeof(REAL));
-
-  cudaMalloc((void**)&dmyResult, outer * numX * numY * sizeof(REAL));
-  cudaMalloc((void**)&dmyVarX, outer * numX * numY * sizeof(REAL));
-  cudaMalloc((void**)&dmyDxx, outer * numX * 4 * sizeof(REAL));
 // X-loop
-
-  cudaMemcpy(dax, ax, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  cudaMemcpy(dbx, bx, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  cudaMemcpy(dcx, cx, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  cudaMemcpy(du, ux, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-
-  cudaMemcpy(dmyResult, globs.myResult, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  cudaMemcpy(dmyVarX, globs.myVarX, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  cudaMemcpy(dmyDxx, globs.myDxx, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
-
-
-  dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
-  dim3 numBlocks(numX / BLOCK_SIZE, numY / BLOCK_SIZE, outer);
-
-  for (int o = 0; o < outer; o++)
+#pragma omp parallel for default(shared) schedule(static) if(outer>8)
+  for (int o = 0; o < outer; o++) 
+  {
+    REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
+    for(int j=0;j<numY;j++) 
     {
-      REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
-    for(int j=0;j<numY;j++)
-    {
-      for(int i=0;i<numX;i++)
+      for(int i=0;i<numX;i++) 
       {
         // implicit x
-        ax[o * numX * numY + j * numX + i] =
+        ax[o * numX * numY + j * numX + i] = 
           -0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
                    *globs.myDxx[i * 4 + 0]);
-        bx[o * numX * numY + j * numX + i] =
+        bx[o * numX * numY + j * numX + i] = 
           dtInv - 0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
                           *globs.myDxx[i * 4 + 1]);
         cx[o * numX * numY + j * numX + i] =
           -0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
                    *globs.myDxx[i * 4 + 2]);
         //	explicit x
-        u[o * numX * numY + j * numX + i] =
+        u[o * numX * numY + j * numX + i] = 
           dtInv*globs.myResult[o * numM + i * numY + j];
-        if(i > 0)
+        if(i > 0) 
         {
-          u[o * numX * numY + j * numX + i] +=
+          u[o * numX * numY + j * numX + i] += 
             0.5*(0.5*globs.myVarX[o * numM + + j * numX + i]
                     *globs.myDxx[i * 4 + 0])
                     *globs.myResult[o * numM + (i-1) * numY + j];
         }
-        u[o * numX * numY + j * numX + i]  +=
+        u[o * numX * numY + j * numX + i]  +=  
           0.5*(0.5*globs.myVarX[o * numM + + j * numX + i]*globs.myDxx[i * 4 + 1])
                   *globs.myResult[o * numM + i * numY + j];
         if(i < numX-1) 
@@ -236,13 +172,13 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
           }
           u[o * numX * numY + j * numX + i] += v[o * numX * numY + i * numY + j];
           // Implicit y
-          ay[o * numX * numY + i * numX + j] =
+          ay[o * numX * numY + i * numY + j] =
             -0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
                      *globs.myDyy[j * 4 + 0]);
-          by[o * numX * numY + i * numX + j] = 
+          by[o * numX * numY + i * numY + j] = 
             dtInv - 0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
                             *globs.myDyy[j * 4 + 1]);
-          cy[o * numX * numY + i * numX + j] =
+          cy[o * numX * numY + i * numY + j] =
             -0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
                      *globs.myDyy[j * 4 + 2]);
         }
@@ -262,23 +198,23 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
   //	implicit y
 #pragma omp parallel for default(shared) schedule(static) if(outer>8)
-  for(int o = 0; o < outer; o++) 
+  for(int o = 0; o < outer; o++)
   {
     REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
-    for(int i=0;i<numX;i++) 
+    for(int i=0;i<numX;i++)
     {
-      for(int j=0;j<numY;j++) 
+      for(int j=0;j<numY;j++)
       {  // here a, b, c should have size [numY]
-        y[o * numX * numY + i * numY +j] =
+        y[o * numX * numY + i * numY + j] =
           dtInv*u[o * numX * numY + j * numX + i]
            -0.5*v[o * numX * numY + i * numY + j];
       }
     }
   }
 #pragma omp parallel for default(shared) schedule(static) if(outer>8)
-  for(int o = 0; o < outer; o++) 
+  for(int o = 0; o < outer; o++)
   {
-    for(int i=0;i<numX;i++) 
+    for(int i=0;i<numX;i++)
     {
       // here yy should have size [numY]
       tridagPar(&ay[o * numX * numY + i * numY],&by[o * numX * numY + i * numY],
@@ -323,5 +259,51 @@ void   run_OrigCPU(const unsigned int& outer,const unsigned int& numX,
     res[i] = globals.myResult[i * globals.numM + globals.myXindex * numY + globals.myYindex];
   }
 }
+
+//Kernels
+
+__global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, REAL* myDxx, REAL* myResult,
+                           REAL dtInv, int numX, int numY) {
+
+  int i = BLOCK_SIZE * blockIdx.x + threadIdx.x;
+  int j = BLOCK_SIZE * blockIdx.y + threadIdx.y;
+  int o = blockIdx.z;
+
+  int numM = numY * numX;
+
+  ax[o * numX * numY + j * numX + i] = -0.5*(0.5*myVarX[o * numM + j * numX + i]*myDxx[i * 4 + 0]);
+
+  bx[o * numX * numY + j * numX + i] =
+    dtInv - 0.5*(0.5*myVarX[o * numM + j * numX + i]
+                 *myDxx[i * 4 + 1]);
+  cx[o * numX * numY + j * numX + i] =
+    -0.5*(0.5*myVarX[o * numM + j * numX + i]
+          *myDxx[i * 4 + 2]);
+  //	explicit x
+  u[o * numX * numY + j * numX + i] =
+    dtInv*myResult[o * numM + i * numY + j];
+
+  if(i > 0) {
+      u[o * numX * numY + j * numX + i] +=
+        0.5*(0.5*myVarX[o * numM + + j * numX + i]
+             *myDxx[i * 4 + 0])
+        *myResult[o * numM + (i-1) * numY + j];
+    }
+
+  u[o * numX * numY + j * numX + i]  +=
+    0.5*(0.5*myVarX[o * numM + + j * numX + i]*myDxx[i * 4 + 1])
+    *myResult[o * numM + i * numY + j];
+
+  if(i < numX-1) {
+      u[o * numX * numY + j * numX + i] +=
+        0.5*(0.5*myVarX[o * numM + + j * numX + i]
+             *myDxx[i * 4 + 2])
+        *myResult[o * numM + (i+1) * numY + j];
+    }
+
+
+}
+
+
 
 //#endif // PROJ_CORE_ORIG

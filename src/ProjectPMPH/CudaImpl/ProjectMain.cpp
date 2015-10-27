@@ -1,4 +1,4 @@
-#include "ParseInput.h"
+#include "../include/ParseInput.h"
 
 #include "ProjHelperFun.h"
 
