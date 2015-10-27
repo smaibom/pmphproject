@@ -83,7 +83,7 @@ __global__
 
 void
 rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX, 
-          const int& numY) 
+          const int& numY)
 {
   unsigned numZ = max(numX,numY);
   unsigned numM = numX * numY;
@@ -93,9 +93,9 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   REAL* ax = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numY][numX]
   REAL* bx = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numY][numX]
   REAL* cx = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numY][numX]
-  REAL* ay = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numX][numY]
-  REAL* by = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numX][numY]
-  REAL* cy = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numX][numY]
+  REAL* ay = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
+  REAL* by = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
+  REAL* cy = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
   REAL* y = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numX][numY]
   REAL* yy = (REAL*) malloc(sizeof(REAL)*outer*numZ); // [outer][numZ]
 
@@ -174,13 +174,13 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
           }
           u[o * numX * numY + j * numX + i] += v[o * numX * numY + i * numY + j];
           // Implicit y
-          ay[o * numZ * numZ + i * numZ + j] =
+          ay[o * numX * numY + i * numX + j] =
             -0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
                      *globs.myDyy[j * 4 + 0]);
-          by[o * numZ * numZ + i * numZ + j] = 
+          by[o * numX * numY + i * numX + j] = 
             dtInv - 0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
                             *globs.myDyy[j * 4 + 1]);
-          cy[o * numZ * numZ + i * numZ + j] =
+          cy[o * numX * numY + i * numX + j] =
             -0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
                      *globs.myDyy[j * 4 + 2]);
         }
@@ -219,8 +219,8 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
     for(int i=0;i<numX;i++) 
     {
       // here yy should have size [numY]
-      tridagPar(&ay[o * numZ * numZ + i * numZ],&by[o * numZ * numZ + i * numZ],
-                &cy[o * numZ * numZ + i * numZ],&y[o * numZ * numZ + i * numZ],
+      tridagPar(&ay[o * numX * numY + i * numX],&by[o * numX * numY + i * numX],
+                &cy[o * numX * numY + i * numX],&y[o * numZ * numZ + i * numZ],
                 numY,&globs.myResult[o * numM + i * numY],&yy[o*numZ]);
     }
   }
