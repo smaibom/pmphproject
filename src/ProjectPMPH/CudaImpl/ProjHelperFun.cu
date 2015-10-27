@@ -1,4 +1,4 @@
-#include "ProjHelperFun.h"
+#include "ProjHelperFun.cu.h"
 
 /**************************/
 /**** HELPER FUNCTIONS ****/
