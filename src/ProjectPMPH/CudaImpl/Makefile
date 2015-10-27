@@ -5,7 +5,7 @@ CXXFLAGS   = -O3 -DWITH_FLOATS=0
 INCLUDES    += -I ../include
 GPU_OPTS   = -D lgWARP=5
 
-SOURCES_CPP =ProjectMain.cu ProjHelperFun.cu ProjCoreOrig.cu 
+SOURCES_CPP =ProjectMain.cpp ProjHelperFun.cu ProjCoreOrig.cu 
 HELPERS     =ProhHelperFun.h ../include/Constants.h ../include/ParseInput.h ../include/ParserC.h ../include/OpenmpUtil.h TridagPar.h
 OBJECTS     =ProjectMain.o ProjHelperFun.o  ProjCoreOrig.o
 EXECUTABLE  =runproject
@@ -14,6 +14,9 @@ EXECUTABLE  =runproject
 default: cpu
 
 .o: $(SOURCES_CPP) $(HELPERS)
+	$(CXX) $(CXXFLAGS) $(GPU_OPTS) $(INCLUDES) -c -o $@ $<
+
+.cpp.o: $(SOURCES_CPP) $(HELPERS)
 	$(CXX) $(CXXFLAGS) $(GPU_OPTS) $(INCLUDES) -c -o $@ $<
 
 
