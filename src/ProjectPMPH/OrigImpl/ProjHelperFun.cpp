@@ -16,13 +16,17 @@ void initGrid(  const REAL s0, const REAL alpha, const REAL nu,const REAL t,
                 const unsigned numX, const unsigned numY, const unsigned numT, PrivGlobs& globs
 ) {
     for(unsigned i=0;i<numT;++i)
+    {
         globs.myTimeline[i] = t*i/(numT-1);
+    }
     const REAL stdX = 20.0*alpha*s0*sqrt(t);
     const REAL dx = stdX/numX;
     globs.myXindex = static_cast<unsigned>(s0/dx) % numX;
 
     for(unsigned i=0;i<numX;++i)
+    {
         globs.myX[i] = i*dx - globs.myXindex*dx + s0;
+    }
 
     const REAL stdY = 10.0*nu*sqrt(t);
     const REAL dy = stdY/numY;
@@ -30,7 +34,9 @@ void initGrid(  const REAL s0, const REAL alpha, const REAL nu,const REAL t,
     globs.myYindex = static_cast<unsigned>(numY/2.0);
 
     for(unsigned i=0;i<numY;++i)
+    {
         globs.myY[i] = i*dy - globs.myYindex*dy + logAlpha;
+    }
 }
 
 /**
@@ -42,8 +48,7 @@ void initGrid(  const REAL s0, const REAL alpha, const REAL nu,const REAL t,
  */
 void initOperator(  REAL* x,
                     const unsigned int x_size,
-                    REAL* Dxx
-) {
+                    REAL* Dxx) {
 	const unsigned n = x_size;
 
 	REAL dxl, dxu;
@@ -79,6 +84,13 @@ void initOperator(  REAL* x,
     Dxx[(n-1) * 4 + 3] = 0.0;
 }
 
-
-
-
+void transpose(REAL *matrix_in,REAL* matrix_out,int row, int collum,int outer){
+    for(int o = 0; o < outer; o++){ 
+        for(int i = 0; i < row; i++){
+            for(int j = 0; j < collum; j++){
+                matrix_out [o * row * collum + j*row+i] = 
+                    matrix_in[o*row*collum+i*collum+j];  
+            }
+        }
+    }
+}
