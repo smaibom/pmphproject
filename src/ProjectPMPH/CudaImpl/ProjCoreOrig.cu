@@ -4,7 +4,11 @@
 
 
 
-__global__ void updateParamsKernel(REAL* test){
+__global__ void updateParamsKernel(const unsigned g, const REAL alpha, 
+                                   const REAL beta, const REAL nu, REAL* myVarX
+                                   REAL* myVarY, REAL* myY, REAL* myX, 
+                                   REAL* myTimeline, const int numO, 
+                                   const int numM, const int numX, const int numY){
   return;
 }
 
