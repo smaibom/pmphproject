@@ -1,107 +1,132 @@
-\section{Loops}
-\subsection{}
-\begin{lstlisting}
-for o = 0, outer, 1:
-  strike = o * 0.001
+\section{Loops and Structure of the program}
+\subsection{Entry Point}
+This loops acts as the entry-point for the program, encompassing close to all of the performed computation. It is not parallel in its
+ current form. The variables \verb!strike! and \verb!globs! are both written to and read from in each iteration causing cross-iteration
+ dependencies. However, they are both immeditely overwritten, \verb!globs! in the first three lines of \verb!value!, so the dependencies
+ cannot be true dependencies and the loop is parallisable.
+\begin{lstlisting}[caption=Outermost loop, label=outerloop]
+REAL strike;
+PrivGlobs    globs(numX, numY, numT);
 
-  //Initgrid
-  for i = 0, numT, 1:
-    write:
-      myTimeline[i]
-  endfor
-  for i = 0, numX, 1:
-    write:
-      myX[i]
-  endfor
-  for i = 0, numY, 1:
-    write:
-      myY[i]
-  endfor
-
-  //InitOperator
-  //x
-  for i = 1, numX-1, 1:
-    read:
-      myX[i-1]
-      myX[i]
-      myX[i+1]
-    write:
-      dxx[i]
-  endfor
-  //y
-  for i = 1, numY-1, 1:
-    read:
-      myY[i-1]
-      myY[i]
-      myY[i+1]
-    write:
-      dyy[i]
-  endfor
-
-
-  //SetPayoff
-  for i = 0, numX, 1:
-    payoff 
-    read:
-      strike
-      myX[i]
-    for j = 0, numY, 1:
-      myResult[i][j] = payoff;
-    endfor
-  endfor
-
-  for g = outer-2, 0, -1:
-    //updateParams
-    for i = 0, numX, 1:
-      for j = 0, numY, 1:
-      write:
-        myVarX[i][j]  
-        myVarY[i][j]
-      read: 
-        myX[i] 
-        myY[j] 
-        mytimeline[g]
-      endfor
-    endfor
-
-    //rollback
-
-    //explicit x
-    for i = 0, numX, 1:
-      for j = 0, numY, 1:
-      write:
-        u[j][i]
-      read:
-
-      endfor
-    endfor
-
-    //explicit y
-    for j = 0, numY, 1:
-      for i = 0, numX, 1:
-        //write v, update u, read myVarY
-      endfor
-    endfor
-
-    //implicit x
-    for j = 0, numY, 1:
-      for i = 0, numX, 1:
-      //write a,b,c , read myVarX
-      endfor
-
-      //tridag, read a,b,c,u
-      tridag()
-      //write u
-    endfor
-
-    //implicit y
-    for i = 0, numX, 1:
-      for j = 0, numY, 1:
-        
-
-  endfor
-endfor
-
+for( unsigned i = 0; i < outer; ++ i ) {
+      strike = 0.001*i;
+      res[i] = value( globs, s0, strike, t,
+                      alpha, nu,    beta,
+                      numX,  numY,  numT );
+}
 \end{lstlisting}
 
+\subsection{Second level}
+
+\paragraph{setPayoff}
+This 2-dimensional loop found in the \verb!setPayoff! function contains a trivially parallel inner-nest.
+ However, the outer nest is not parallel due to a read-after-write
+ dependency between the statements on line 3 and 5.
+\begin{lstlisting}[caption=setPayoff() loop, label=payoffloop]
+for(unsigned i=0;i<globs.myX.size();++i)
+{
+	REAL payoff = max(globs.myX[i]-strike, (REAL)0.0);
+	for(unsigned j=0;j<globs.myY.size();++j)
+		globs.myResult[i][j] = payoff;
+}
+\end{lstlisting}
+
+\paragraph{Time}
+This loop is inherently sequential. Each iteration uses reads and writes to arrays that are part \verb!globs! making
+ each iteration dependant on the previous.
+\begin{lstlisting}[caption=Timeline loop, label=timeloop]
+for(int i = globs.myTimeline.size()-2;i>=0;--i)
+    {
+        updateParams(i,alpha,beta,nu,globs);
+        rollback(i, globs);
+    }
+\end{lstlisting}
+
+\subsection{Third level}
+
+\paragraph{updateParams}
+This loop is trivially parallel in both loop nests as it does not write to any of the locations it reads from, and
+ doesn't write to the same location twice.
+\begin{lstlisting}[caption=Loop in updateParams(), label=updpar]
+for(unsigned i=0;i<globs.myX.size();++i)
+   for(unsigned j=0;j<globs.myY.size();++j) {
+       globs.myVarX[i][j] = exp(2.0*(  beta*log(globs.myX[i])
+                                     + globs.myY[j]
+                                     - 0.5*nu*nu*globs.myTimeline[g])
+                               );
+       globs.myVarY[i][j] = exp(2.0*(  alpha*log(globs.myX[i])
+                                     + globs.myY[j]
+                                     - 0.5*nu*nu*globs.myTimeline[g])
+                               );
+   }
+\end{lstlisting}
+
+\subsubsection{Rollback}
+\begin{lstlisting}[caption=Explicit x loop, label=exloop]
+  for(i=0;i<numX;i++) {
+        for(j=0;j<numY;j++) {
+            u[j][i] = dtInv*globs.myResult[i][j];
+
+            if(i > 0) {
+              u[j][i] += 0.5*( 0.5*globs.myVarX[i][j]
+                                  *globs.myDxx[i][0] )
+                            * globs.myResult[i-1][j];
+            }
+            u[j][i]  +=  0.5*( 0.5*globs.myVarX[i][j]
+                                  *globs.myDxx[i][1] )
+                            * globs.myResult[i][j];
+            if(i < numX-1) {
+              u[j][i] += 0.5*( 0.5*globs.myVarX[i][j]
+                                  *globs.myDxx[i][2] )
+                            * globs.myResult[i+1][j];
+            }
+        }
+    }
+\end{lstlisting}
+\begin{lstlisting}[caption=Explicit y loop, label=eyloop]
+    for(j=0;j<numY;j++)
+    {
+        for(i=0;i<numX;i++) {
+            v[i][j] = 0.0;
+
+            if(j > 0) {
+              v[i][j] +=  ( 0.5*globs.myVarY[i][j]
+                               *globs.myDyy[j][0] )
+                         *  globs.myResult[i][j-1];
+            }
+            v[i][j]  +=   ( 0.5*globs.myVarY[i][j]
+                               *globs.myDyy[j][1] )
+                         *  globs.myResult[i][j];
+            if(j < numY-1) {
+              v[i][j] +=  ( 0.5*globs.myVarY[i][j]
+                               *globs.myDyy[j][2] )
+                         *  globs.myResult[i][j+1];
+            }
+            u[j][i] += v[i][j];
+        }
+    }
+\end{lstlisting}
+\begin{lstlisting}
+for(j=0;j<numY;j++) {
+    for(i=0;i<numX;i++) {
+        a[i] =		 - 0.5*(0.5*globs.myVarX[i][j]*globs.myDxx[i][0]);
+        b[i] = dtInv - 0.5*(0.5*globs.myVarX[i][j]*globs.myDxx[i][1]);
+        c[i] =		 - 0.5*(0.5*globs.myVarX[i][j]*globs.myDxx[i][2]);
+    }
+    tridag(a,b,c,u[j],numX,u[j],yy);
+}
+\end{lstlisting}
+\begin{lstlisting}
+for(i=0;i<numX;i++) {
+     for(j=0;j<numY;j++) {
+         a[j] =		 - 0.5*(0.5*globs.myVarY[i][j]*globs.myDyy[j][0]);
+         b[j] = dtInv - 0.5*(0.5*globs.myVarY[i][j]*globs.myDyy[j][1]);
+         c[j] =		 - 0.5*(0.5*globs.myVarY[i][j]*globs.myDyy[j][2]);
+     }
+      for(j=0;j<numY;j++)
+         y[j] = dtInv*u[j][i] - 0.5*v[i][j];
+
+     tridag(a,b,c,y,numY,globs.myResult[i],yy);
+ }
+\end{lstlisting}
 
