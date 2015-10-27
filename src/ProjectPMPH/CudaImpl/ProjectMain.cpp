@@ -1,4 +1,3 @@
-#include "OpenmpUtil.h"
 #include "ParseInput.h"
 
 #include "ProjHelperFun.h"
