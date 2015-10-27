@@ -4,6 +4,10 @@
 
 
 
+__global__ void updateParamsKernel(REAL* test){
+  return;
+}
+
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, 
                   const REAL nu, PrivGlobs& globs, const int outer)
 {
