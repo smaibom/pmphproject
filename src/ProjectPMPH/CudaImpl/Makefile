@@ -3,10 +3,10 @@ LIB        = -L$(OPENCL_LIBDIR) -lOpenCL
 CXXFLAGS   = -O3 -DWITH_FLOATS=0
 
 INCLUDES    = -I ../include
-GPU_OPTS   = -D lgWARP=5
+GPU_OPTS   = -D lgWARP=5 -arch=compute_30
 
 SOURCES_CPP =ProjectMain.cpp ProjHelperFun.cpp ProjCoreOrig.cu
-HELPERS     =ProjHelperFun.h ../include/Constants.h ../include/ParseInput.h ../include/ParserC.h ../include/OpenmpUtil.h TridagPar.h
+HELPERS     =ProjHelperFun.h ../include/Constants.h ../include/ParseInput.h ../include/ParserC.h ../include/OpenmpUtil.h TridagPar.h TridagKernel.cu.h
 OBJECTS     =ProjectMain.o ProjHelperFun.o  ProjCoreOrig.o
 EXECUTABLE  =runproject
 

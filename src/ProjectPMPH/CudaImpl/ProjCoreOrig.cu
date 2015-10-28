@@ -1,6 +1,7 @@
 #include "ProjHelperFun.h"
 #include "Constants.h"
-#include "TridagPar.h"
+//#include "TridagPar.h"
+#include "TridagKernel.cu.h"
 
 #define BLOCK_SIZE 32
 
@@ -197,11 +198,12 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   REAL* yy = (REAL*) malloc(sizeof(REAL)*outer*numZ); // [outer][numZ]
 
   //Device memory
-  REAL* dax,* dbx,* dcx,* du,* dmyVarX,* dmyDxx,* dmyResult;
+  REAL* dax,* dbx,* dcx,* du,* dmyVarX,* dmyDxx,* dmyResult,* dyy;
   cudaMalloc((void**)&dax, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&dbx, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&dcx, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&du, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&dyy, outer * numX * numY * sizeof(REAL));
 
   cudaMalloc((void**)&dmyResult, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&dmyVarX, outer * numX * numY * sizeof(REAL));
@@ -255,19 +257,22 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
 
 
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
-  for(int o = 0; o < outer; o++) 
-  {
-    for(int j=0;j<numY;j++) 
-      {
-      // here yy should have size [numX]
-      tridagPar(&ax[o * numX * numY + j * numX],&bx[o * numX * numY + j * numX],
-                &cx[o * numX * numY + j * numX], &u[o * numX * numY + j * numX], 
-                numX, &u[o * numX * numY + numX * j], &yy[o*numZ]);
-    }
-  }
+  tridagCUDAWrapper( numY, dax, dbx, dcx, du,  numX * numY * outer,
+		     numX, du, dyy);
+
+  // for(int o = 0; o < outer; o++) 
+  // {
+  //   for(int j=0;j<numY;j++) 
+  //     {
+  //     // here yy should have size [numX]
+  //     tridagPar(&ax[o * numX * numY + j * numX],&bx[o * numX * numY + j * numX],
+  //               &cx[o * numX * numY + j * numX], &u[o * numX * numY + j * numX], 
+  //               numX, &u[o * numX * numY + numX * j], &yy[o*numZ]);
+  //   }
+  // }
 
 
+  cudaMemcpy(u, du, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   REAL* dy;
 
   cudaMalloc((void**)&dy, outer * numY * numX * sizeof(REAL));
@@ -292,17 +297,19 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   //   }
   // }
 
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
-  for(int o = 0; o < outer; o++)
-  {
-    for(int i=0;i<numX;i++)
-    {
-      // here yy should have size [numY]
-      tridagPar(&ay[o * numX * numY + i * numY],&by[o * numX * numY + i * numY],
-                &cy[o * numX * numY + i * numY],&y[o * numX * numY + i * numY],
-                numY,&globs.myResult[o * numM + i * numY],&yy[o*numZ]);
-    }
-  }
+  tridagCUDAWrapper( numY, day, dby, dcy, dy,  numX * numY * outer,
+		     numY, dmyResult, dyy);
+  cudaMemcpy(globs.myResult, dmyResult, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+  // for(int o = 0; o < outer; o++)
+  // {
+  //   for(int i=0;i<numX;i++)
+  //   {
+  //     // here yy should have size [numY]
+  //     tridagPar(&ay[o * numX * numY + i * numY],&by[o * numX * numY + i * numY],
+  //               &cy[o * numX * numY + i * numY],&y[o * numX * numY + i * numY],
+  //               numY,&globs.myResult[o * numM + i * numY],&yy[o*numZ]);
+  //   }
+  // }
 
 
   /* Free Memory */
@@ -320,6 +327,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaFree(day);
   cudaFree(dby);
   cudaFree(dcy);
+  cudaFree(dyy);
   
   
   free(u);

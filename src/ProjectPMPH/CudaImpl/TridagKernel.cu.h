@@ -3,7 +3,7 @@
 
 #include <cuda_runtime.h>
 
-typedef float REAL;
+//typedef float REAL;
 
 class MyReal2 {
   public:
@@ -340,7 +340,7 @@ void tridagCUDAWrapper( const unsigned int block_size,
 
     // assumes sgm_sz divides block_size
     if((block_size % sgm_sz)!=0) {
-        printf("Invalid segment or block size. Exiting!\n\n!");
+      printf("Invalid segment or block size. Exiting!\n\n%d,%d", block_size, sgm_sz);
         exit(0);
     }
     if((n % sgm_sz)!=0) {
