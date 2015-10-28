@@ -92,6 +92,16 @@ __global__ void rollback_y(REAL* ay, REAL* by, REAL* cy, REAL* u, REAL* v, REAL*
 	  *myDyy[j * 4 + 2]);
 }
 
+__global__ void rollback_implicit_y (REAL* dy, REAL*  du, REAL* dv, REAL dtInv, int numX, int numY) {
+  int j = BLOCK_SIZE * blockIdx.x + threadIdx.x;
+  int i = BLOCK_SIZE * blockIdx.y + threadIdx.y;
+  int o = blockIdx.z;
+
+  y[o * numX * numY + i * numY + j] = dtInv*u[o * numX * numY + j * numX + i]
+    - 0.5*v[o * numX * numY + i * numY + j];
+
+}
+
 
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, 
                   const REAL nu, PrivGlobs& globs, const int outer)
@@ -257,21 +267,31 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
     }
   }
 
-  //	implicit y
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
-  for(int o = 0; o < outer; o++)
-  {
-    REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
-    for(int i=0;i<numX;i++)
-    {
-      for(int j=0;j<numY;j++)
-      {  // here a, b, c should have size [numY]
-        y[o * numX * numY + i * numY + j] =
-          dtInv*u[o * numX * numY + j * numX + i]
-           -0.5*v[o * numX * numY + i * numY + j];
-      }
-    }
-  }
+
+  REAL* dy;
+
+  cudaMalloc((void**)&dy, outer * numY * numX * sizeof(REAL));
+
+
+  cudaMemcpy(du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  rollback_implicit_y<<< numBlocks, threadsPerBlock >>> (dy, du, dv,
+						dtInv, numX, numY);
+  cudaMemcpy(y, dy, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+
+  // for(int o = 0; o < outer; o++)
+  // {
+  //   REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
+  //   for(int i=0;i<numX;i++)
+  //   {
+  //     for(int j=0;j<numY;j++)
+  //     {  // here a, b, c should have size [numY]
+  //       y[o * numX * numY + i * numY + j] =
+  //         dtInv*u[o * numX * numY + j * numX + i]
+  //          -0.5*v[o * numX * numY + i * numY + j];
+  //     }
+  //   }
+  // }
+
 #pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for(int o = 0; o < outer; o++)
   {
