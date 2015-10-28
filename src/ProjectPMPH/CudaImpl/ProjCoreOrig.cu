@@ -92,7 +92,7 @@ __global__ void rollback_y(REAL* ay, REAL* by, REAL* cy, REAL* u, REAL* v, REAL*
 	  *myDyy[j * 4 + 2]);
 }
 
-__global__ void rollback_implicit_y (REAL* dy, REAL*  du, REAL* dv, REAL dtInv, int numX, int numY) {
+__global__ void rollback_implicit_y (REAL* y, REAL*  u, REAL* v, REAL dtInv, int numX, int numY) {
   int j = BLOCK_SIZE * blockIdx.x + threadIdx.x;
   int i = BLOCK_SIZE * blockIdx.y + threadIdx.y;
   int o = blockIdx.z;
