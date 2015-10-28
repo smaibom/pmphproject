@@ -241,8 +241,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaMemcpy(dmyDyy, globs.myDyy, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
 
 
-  
-  threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
   numBlocks.x = numY / BLOCK_SIZE;
   numBlocks.y = numX / BLOCK_SIZE;
 
