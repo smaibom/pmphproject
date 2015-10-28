@@ -2,11 +2,37 @@
 #include "Constants.h"
 #include "TridagPar.h"
 
-#define BLOCK_SIZE 16
+#define BLOCK_SIZE 32
+
+
+/*Only works on small dataset, no bounds checking*/
+__global__ void updateParamsKernel(const int numM,const int numY,const unsigned g,
+                                   const REAL nu, REAL* myVarX,REAL* myX, REAL* myY,
+                                   REAL* myTimeline, REAL beta){
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    int o = blockIdx.z * blockDim.z + threadIdx.z;
+
+    myVarX[o * numM + i * numY + j] = exp(2.0*(beta*log(myX[i])+ myY[j]
+                        - 0.5*nu*nu*myTimeline[g]));
+}
+
 
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, 
                   const REAL nu, PrivGlobs& globs, const int outer)
 {
+  REAL* myVarX, myX, myY, myTimeline;
+  dim3 block(BLOCK_SIZE,BLOCK_SIZE,1), grid(globs.numX/BLOCK_SIZE,globs.numY/BLOCK_SIZE,outer);
+  cudaMalloc((void**)&myVarX, sizeof(REAL)*outer*globs.numM);
+  cudaMalloc((void**)&myX, sizeof(REAL)*globs.numX);
+  cudaMalloc((void**)&myY, sizeof(REAL)*globs.numY);
+  cudaMalloc((void**)&myTimeline, sizeof(REAL)*globs.numT);
+
+  cudaMemcpy(myX, globs.myX, sizeof(REAL)*globs.numX, cudaMemcpyHostToDevice);
+  cudaMemcpy(myY, globs.myY, sizeof(REAL)*globs.numY, cudaMemcpyHostToDevice);
+  cudaMemcpy(myTimeline, globs.myTimeline, sizeof(REAL)*globs.numT, cudaMemcpyHostToDevice);
+
+
 #pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for( unsigned o = 0; o < outer; ++ o )
         {
@@ -14,15 +40,20 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
             {
               for(unsigned j=0;j<globs.numY;++j)
                 {
-                  globs.myVarX[o * globs.numM + i * globs.numY + j] = 
+                  /*globs.myVarX[o * globs.numM + i * globs.numY + j] = 
                     exp(2.0*(  beta*log(globs.myX[i])+ globs.myY[j]
-                        - 0.5*nu*nu*globs.myTimeline[g]));
+                        - 0.5*nu*nu*globs.myTimeline[g]));*/
                   globs.myVarY[o * globs.numM + i * globs.numY + j] = 
                     exp(2.0*(  alpha*log(globs.myX[i])+ globs.myY[j]
                         - 0.5*nu*nu*globs.myTimeline[g] )); // nu*nu
                 }
             }
         }
+
+  updateParamsKernel<<<grid,block>>>(globs.numM,)
+
+  cudaMemcpy(m_out, d_out, sizeof(REAL)*outer*globs.numM, cudaMemcpyDeviceToHost);
+
   REAL* myVarXNew = (REAL*) malloc(sizeof(REAL) * globs.numX * globs.numY * outer);
   transpose(globs.myVarX,myVarXNew,globs.numX,globs.numY,outer);
   free(globs.myVarX);
