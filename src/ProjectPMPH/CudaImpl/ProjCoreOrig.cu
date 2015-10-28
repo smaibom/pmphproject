@@ -48,8 +48,49 @@ __global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, 
 
 }
 
+__global__ void rollback_y(REAL* ay, REAL* by, REAL* cy, REAL* u, REAL* v, REAL* myVarY, REAL* myDyy, REAL* myResult,
+                           REAL dtInv, int numX, int numY) {
+  int j = BLOCK_SIZE * blockIdx.x + threadIdx.x;
+  int i = BLOCK_SIZE * blockIdx.y + threadIdx.y;
+  int o = blockIdx.z;
+  int numM = numX * numY;
 
+  v[o * numX * numY + i * numY + j] = 0.0;
 
+  if(j > 0) 
+    {
+      v[o * numX * numY + i * numY + j] +=  (0.5*myVarY[o * numM + i * numY + j]*myDyy[j * 4 + 0])
+	*myResult[o * numM + i * numY + j-1];
+    }
+
+  v[o * numX * numY + i * numY + j] += (0.5*myVarY[o * numM + i * numY + j]
+					*myDyy[j * 4 + 1])
+    * myResult[o * numM + i  * numY + j];
+
+  if(j < numY-1) 
+    {
+      v[o * numX * numY + i * numY + j] +=  
+	(0.5*myVarY[o * numM + i * numY + j]
+	 *myDyy[j * 4 + 2])
+	*myResult[o * numM + i * numY + j+1];
+    }
+
+  u[o * numX * numY + j * numX + i] += v[o * numX * numY + i * numY + j];
+
+  // Implicit y
+
+  ay[o * numX * numY + i * numY + j] =
+    -0.5*(0.5*myVarY[o * numM + i * numY + j]
+	  *myDyy[j * 4 + 0]);
+
+  by[o * numX * numY + i * numY + j] = 
+    dtInv - 0.5*(0.5*myVarY[o * numM + i * numY + j]
+		 *myDyy[j * 4 + 1]);
+
+  cy[o * numX * numY + i * numY + j] =
+    -0.5*(0.5*myVarY[o * numM + i * numY + j]
+	  *myDyy[j * 4 + 2]);
+}
 
 
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, 
@@ -179,93 +220,83 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaMemcpy(cx, dcx, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   cudaMemcpy(u, du, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
 
-// X-loop
+  REAL* dv,* dmyVarY,* dmyDyy,* day,* dby,* dcy;
 
+  cudaMalloc((void**)&day, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&dby, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&dcy, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&dv, outer * numX * numY * sizeof(REAL));
+
+  cudaMalloc((void**)&dmyVarY, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&dmyDyy, outer * numY * 4 * sizeof(REAL));
+
+
+
+  cudaMemcpy(dax, ax, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  cudaMemcpy(dbx, bx, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  cudaMemcpy(dcx, cx, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  cudaMemcpy(du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+
+
+  
+  dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
+  dim3 numBlocks(numY / BLOCK_SIZE, numX / BLOCK_SIZE, outer);
+
+  rollback_y<<< numBlocks, threadsPerBlock >>> (day, dby, dcy, dv, du, dmyVarY, dmyDyy, dmyResult,
+						dtInv, numX, numY);
   // for (int o = 0; o < outer; o++) 
   // {
   //   REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
-  //   for(int j=0;j<numY;j++) 
+  //   unsigned i, j;
+  //   // Y-Loop
+  //   for(i=0;i<numX;i++) 
   //   {
-  //     for(int i=0;i<numX;i++) 
-  //     {
-  //       // implicit x
-  //       ax[o * numX * numY + j * numX + i] = 
-  //         -0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
-  //                  *globs.myDxx[i * 4 + 0]);
-  //       bx[o * numX * numY + j * numX + i] = 
-  //         dtInv - 0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
-  //                         *globs.myDxx[i * 4 + 1]);
-  //       cx[o * numX * numY + j * numX + i] =
-  //         -0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
-  //                  *globs.myDxx[i * 4 + 2]);
-  //       //	explicit x
-  //       u[o * numX * numY + j * numX + i] = 
-  //         dtInv*globs.myResult[o * numM + i * numY + j];
-  //       if(i > 0) 
+  //     for(j=0;j<numY;j++)
   //       {
-  //         u[o * numX * numY + j * numX + i] += 
-  //           0.5*(0.5*globs.myVarX[o * numM + + j * numX + i]
-  //                   *globs.myDxx[i * 4 + 0])
-  //                   *globs.myResult[o * numM + (i-1) * numY + j];
+  //         // Explicit y
+  //         v[o * numX * numY + i * numY + j] = 0.0;
+  //         if(j > 0) 
+  //         {
+  //           v[o * numX * numY + i * numY + j] +=  
+  //             (0.5*globs.myVarY[o * numM + i * numY + j]*globs.myDyy[j * 4 + 0])
+  //                 *globs.myResult[o * numM + i * numY + j-1];
+  //         }
+
+  //         v[o * numX * numY + i * numY + j] += 
+  //           (0.5*globs.myVarY[o * numM + i * numY + j]
+  //               *globs.myDyy[j * 4 + 1])
+  //               *globs.myResult[o * numM + i  * numY + j];
+
+  //         if(j < numY-1) 
+  //         {
+  //           v[o * numX * numY + i * numY + j] +=  
+  //             (0.5*globs.myVarY[o * numM + i * numY + j]
+  //                 *globs.myDyy[j * 4 + 2])
+  //                 *globs.myResult[o * numM + i * numY + j+1];
+  //         }
+  //         u[o * numX * numY + j * numX + i] += v[o * numX * numY + i * numY + j];
+  //         // Implicit y
+  //         ay[o * numX * numY + i * numY + j] =
+  //           -0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
+  //                    *globs.myDyy[j * 4 + 0]);
+  //         by[o * numX * numY + i * numY + j] = 
+  //           dtInv - 0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
+  //                           *globs.myDyy[j * 4 + 1]);
+  //         cy[o * numX * numY + i * numY + j] =
+  //           -0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
+  //                    *globs.myDyy[j * 4 + 2]);
   //       }
-  //       u[o * numX * numY + j * numX + i]  +=  
-  //         0.5*(0.5*globs.myVarX[o * numM + + j * numX + i]*globs.myDxx[i * 4 + 1])
-  //                 *globs.myResult[o * numM + i * numY + j];
-  //       if(i < numX-1) 
-  //       {
-  //         u[o * numX * numY + j * numX + i] += 
-  //           0.5*(0.5*globs.myVarX[o * numM + + j * numX + i]
-  //                   *globs.myDxx[i * 4 + 2])
-  //                   *globs.myResult[o * numM + (i+1) * numY + j];
-  //       }
-  //     }
   //   }
   // }
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
-  for (int o = 0; o < outer; o++) 
-  {
-    REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
-    unsigned i, j;
-    // Y-Loop
-    for(i=0;i<numX;i++) 
-    {
-      for(j=0;j<numY;j++)
-        {
-          // Explicit y
-          v[o * numX * numY + i * numY + j] = 0.0;
-          if(j > 0) 
-          {
-            v[o * numX * numY + i * numY + j] +=  
-              (0.5*globs.myVarY[o * numM + i * numY + j]*globs.myDyy[j * 4 + 0])
-                  *globs.myResult[o * numM + i * numY + j-1];
-          }
 
-          v[o * numX * numY + i * numY + j] += 
-            (0.5*globs.myVarY[o * numM + i * numY + j]
-                *globs.myDyy[j * 4 + 1])
-                *globs.myResult[o * numM + i  * numY + j];
+  cudaMemcpy(ay, day, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaMemcpy(by, dby, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaMemcpy(cy, dcy, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaMemcpy(v, dv, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaMemcpy(u, du, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
 
-          if(j < numY-1) 
-          {
-            v[o * numX * numY + i * numY + j] +=  
-              (0.5*globs.myVarY[o * numM + i * numY + j]
-                  *globs.myDyy[j * 4 + 2])
-                  *globs.myResult[o * numM + i * numY + j+1];
-          }
-          u[o * numX * numY + j * numX + i] += v[o * numX * numY + i * numY + j];
-          // Implicit y
-          ay[o * numX * numY + i * numY + j] =
-            -0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
-                     *globs.myDyy[j * 4 + 0]);
-          by[o * numX * numY + i * numY + j] = 
-            dtInv - 0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
-                            *globs.myDyy[j * 4 + 1]);
-          cy[o * numX * numY + i * numY + j] =
-            -0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
-                     *globs.myDyy[j * 4 + 2]);
-        }
-    }
-  }
+
+
 #pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for(int o = 0; o < outer; o++) 
   {
@@ -304,6 +335,14 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
                 numY,&globs.myResult[o * numM + i * numY],&yy[o*numZ]);
     }
   }
+  cudaFree(dax);
+  cudaFree(dbx);
+  cudaFree(dcx);
+  cudaFree(du);
+  cudaFree(dmyVarX);
+  cudaFree(dmyDxx);
+  cudaFree(dmyResult);
+  
   free(u);
   free(ax);
   free(ay);
