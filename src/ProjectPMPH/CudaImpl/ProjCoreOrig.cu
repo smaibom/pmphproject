@@ -237,12 +237,16 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaMemcpy(dcx, cx, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
   cudaMemcpy(du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
 
+  cudaMemcpy(dmyVarY, globs.myVarY, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  cudaMemcpy(dmyDyy, globs.myDyy, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
+
 
   
-  dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
-  dim3 numBlocks(numY / BLOCK_SIZE, numX / BLOCK_SIZE, outer);
+  threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
+  numBlocks.x = numY / BLOCK_SIZE;
+  numBlocks.y = numX / BLOCK_SIZE;
 
-  rollback_y<<< numBlocks, threadsPerBlock >>> (day, dby, dcy, dv, du, dmyVarY, dmyDyy, dmyResult,
+  rollback_y<<< numBlocks, threadsPerBlock >>> (day, dby, dcy, du, dv, dmyVarY, dmyDyy, dmyResult,
 						dtInv, numX, numY);
   // for (int o = 0; o < outer; o++) 
   // {
