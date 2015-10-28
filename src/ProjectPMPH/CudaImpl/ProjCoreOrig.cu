@@ -198,10 +198,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaMalloc((void**)&dmyDxx, outer * numX * 4 * sizeof(REAL));
 
 
-
-  cudaMemcpy(dax, ax, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  cudaMemcpy(dbx, bx, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  cudaMemcpy(dcx, cx, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
   cudaMemcpy(du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
 
   cudaMemcpy(dmyResult, globs.myResult, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
@@ -218,7 +214,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaMemcpy(ax, dax, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   cudaMemcpy(bx, dbx, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   cudaMemcpy(cx, dcx, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
-  cudaMemcpy(u, du, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+
 
   REAL* dv,* dmyVarY,* dmyDyy,* day,* dby,* dcy;
 
@@ -231,12 +227,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaMalloc((void**)&dmyDyy, outer * numY * 4 * sizeof(REAL));
 
 
-
-  cudaMemcpy(dax, ax, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  cudaMemcpy(dbx, bx, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  cudaMemcpy(dcx, cx, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  cudaMemcpy(du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-
   cudaMemcpy(dmyVarY, globs.myVarY, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
   cudaMemcpy(dmyDyy, globs.myDyy, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
 
@@ -246,50 +236,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
   rollback_y<<< numBlocks, threadsPerBlock >>> (day, dby, dcy, du, dv, dmyVarY, dmyDyy, dmyResult,
 						dtInv, numX, numY);
-  // for (int o = 0; o < outer; o++) 
-  // {
-  //   REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
-  //   unsigned i, j;
-  //   // Y-Loop
-  //   for(i=0;i<numX;i++) 
-  //   {
-  //     for(j=0;j<numY;j++)
-  //       {
-  //         // Explicit y
-  //         v[o * numX * numY + i * numY + j] = 0.0;
-  //         if(j > 0) 
-  //         {
-  //           v[o * numX * numY + i * numY + j] +=  
-  //             (0.5*globs.myVarY[o * numM + i * numY + j]*globs.myDyy[j * 4 + 0])
-  //                 *globs.myResult[o * numM + i * numY + j-1];
-  //         }
-
-  //         v[o * numX * numY + i * numY + j] += 
-  //           (0.5*globs.myVarY[o * numM + i * numY + j]
-  //               *globs.myDyy[j * 4 + 1])
-  //               *globs.myResult[o * numM + i  * numY + j];
-
-  //         if(j < numY-1) 
-  //         {
-  //           v[o * numX * numY + i * numY + j] +=  
-  //             (0.5*globs.myVarY[o * numM + i * numY + j]
-  //                 *globs.myDyy[j * 4 + 2])
-  //                 *globs.myResult[o * numM + i * numY + j+1];
-  //         }
-  //         u[o * numX * numY + j * numX + i] += v[o * numX * numY + i * numY + j];
-  //         // Implicit y
-  //         ay[o * numX * numY + i * numY + j] =
-  //           -0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
-  //                    *globs.myDyy[j * 4 + 0]);
-  //         by[o * numX * numY + i * numY + j] = 
-  //           dtInv - 0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
-  //                           *globs.myDyy[j * 4 + 1]);
-  //         cy[o * numX * numY + i * numY + j] =
-  //           -0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
-  //                    *globs.myDyy[j * 4 + 2]);
-  //       }
-  //   }
-  // }
 
   cudaMemcpy(ay, day, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   cudaMemcpy(by, dby, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
@@ -337,6 +283,10 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
                 numY,&globs.myResult[o * numM + i * numY],&yy[o*numZ]);
     }
   }
+
+
+  /* Free Memory */
+
   cudaFree(dax);
   cudaFree(dbx);
   cudaFree(dcx);
@@ -344,6 +294,13 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaFree(dmyVarX);
   cudaFree(dmyDxx);
   cudaFree(dmyResult);
+  cudaFree(dv);
+  cudaFree(dmyVarY);
+  cudaFree(dmyDyy);
+  cudaFree(day);
+  cudaFree(dby);
+  cudaFree(dcy);
+  
   
   free(u);
   free(ax);
