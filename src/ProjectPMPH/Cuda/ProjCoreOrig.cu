@@ -42,7 +42,7 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
         }
 
     //Device memory
-  REAL* dmyTimeline, dmyX,* dmyY,* dmyVarX;
+  REAL* dmyTimeline, dmyX,* dmyY,* dmyVarX, *dmyVarY;
   cudaMalloc((void**)&dmyVarX, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&dmyX, numX * sizeof(REAL));
   cudaMalloc((void**)&dmyY, numY * sizeof(REAL));
@@ -57,8 +57,6 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
   updateParamsKernel<<< numBlocks, threadsPerBlock >>> (g, alpha, beta, nu, 
                                                         dmyVarX, dmyVarY, dmyY,dmyX,dmyTimeline,numY,numX*numY);
 
-            dtInv, numX, numY);
-  cudaThreadSyncronice();
   cudaMemcpy(globs.myVarX, dmyVarX, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   REAL* myVarXNew = (REAL*) malloc(sizeof(REAL) * globs.numX * globs.numY * outer);
   transpose(globs.myVarX,myVarXNew,globs.numX,globs.numY,outer);
