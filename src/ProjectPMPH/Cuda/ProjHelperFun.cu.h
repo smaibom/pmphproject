@@ -49,6 +49,9 @@ struct PrivGlobs {
   REAL* dax;
   REAL* dbx;
   REAL* dcx;
+  REAL* day;
+  REAL* dby;
+  REAL* dcy;
 
   // u, v and uu
   REAL* du;
@@ -89,6 +92,9 @@ struct PrivGlobs {
     cudaMalloc((void**)&this->dax, outer * numX * numY * sizeof(REAL));
     cudaMalloc((void**)&this->dbx, outer * numX * numY * sizeof(REAL));
     cudaMalloc((void**)&this->dcx, outer * numX * numY * sizeof(REAL));
+    cudaMalloc((void**)&this->day, outer * numX * numY * sizeof(REAL));
+    cudaMalloc((void**)&this->dby, outer * numX * numY * sizeof(REAL));
+    cudaMalloc((void**)&this->dcy, outer * numX * numY * sizeof(REAL));
     cudaMalloc((void**)&this->du, outer * numX * numY * sizeof(REAL));
   } 
 } __attribute__ ((aligned (128)));
