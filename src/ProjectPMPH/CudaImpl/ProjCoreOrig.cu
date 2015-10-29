@@ -1,7 +1,7 @@
 #include "ProjHelperFun.h"
 #include "Constants.h"
 //#include "TridagPar.h"
-#include "TridagPar.cu.h"
+#include "TridagKernel.cu.h"
 
 #define BLOCK_SIZE 32
 
@@ -200,7 +200,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   //Device memory
   REAL* dax,* dbx,* dcx,* du,* dmyVarX,* dmyDxx,* dmyResult;
   REAL* dv,* dmyVarY,* dmyDyy,* day,* dby,* dcy;
-  REAL* dy, duu;
+  REAL* dy,* duu;
 
 
   cudaMalloc((void**)&dax, outer * numX * numY * sizeof(REAL));
@@ -258,15 +258,15 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaMemcpy(u, du, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
 
 
-  void tridagCUDAWrapper( numY,
-                          dax,
-                          dbx,
-                          dcx,
-                          du,
-                          numX * numY * outer,
-                          numX,
-                          du,
-                          duu );
+  tridagCUDAWrapper( numY,
+		     dax,
+		     dbx,
+		     dcx,
+		     du,
+		     numX * numY * outer,
+		     numX,
+		     du,
+		     duu );
 
 // #pragma omp parallel for default(shared) schedule(static) if(outer>8)
 //   for(int o = 0; o < outer; o++)
@@ -290,15 +290,15 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaMemcpy(y, dy, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
 
 
-  void tridagCUDAWrapper( numY,
-                          day,
-                          dby,
-                          dcy,
-                          dy,
-                          numX * numY * outer,
-                          numY,
-                          dmyResult,
-                          duu );
+  tridagCUDAWrapper( numY,
+		     day,
+		     dby,
+		     dcy,
+		     dy,
+		     numX * numY * outer,
+		     numY,
+		     dmyResult,
+		     duu );
   
   cudaMemcpy(globs.myResult, dmyResult, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   // for(int o = 0; o < outer; o++)
