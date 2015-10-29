@@ -56,6 +56,8 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
   //REAL* myVarXNew = (REAL*) malloc(sizeof(REAL) * globs.numX * globs.numY * outer);
   const int T = BLOCK_SIZE;
 
+  numBlocks.x = numY/BLOCK_SIZE;
+  numBlocks.y = numX/BLOCK_SIZE;
   tilling_transpose_kernel<T><<<numBlocks,threadsPerBlock>>>(globs.dmyVarX,globs.tmp,globs.numX,globs.numY);
   //free(globs.myVarX);
   //globs.myVarX = myVarXNew;
