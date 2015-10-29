@@ -24,7 +24,6 @@ struct PrivGlobs {
   REAL*        dmyY;
   REAL*        myTimeline; // [numT]
   REAL*        dmyTimeline;
-  REAL*        dmyTimeline;
   unsigned            myXindex;
   unsigned            myYindex;
 
@@ -69,7 +68,7 @@ struct PrivGlobs {
     this->myDyy = (REAL*) malloc(sizeof(REAL) * numY * 4);
 
     this->myTimeline = (REAL*) malloc(sizeof(REAL) * numT);
-    this->dmyTimeLine = cudaMalloc((void**)&this->dmyTimeline, numT * sizeof(REAL));
+    this->dmyTimeline = cudaMalloc((void**)&this->dmyTimeline, numT * sizeof(REAL));
 
     this->  myVarX = (REAL*) malloc(sizeof(REAL) * numX * numY * outer);
     this->  myVarY = (REAL*) malloc(sizeof(REAL) * numX * numY * outer);
