@@ -199,9 +199,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   rollback_x<<< numBlocks, threadsPerBlock >>> (globs.dax, globs.dbx, globs.dcx, globs.du, globs.dmyVarX, globs.dmyDxx, globs.dmyResult,
             dtInv, numX, numY);
 
-  cudaMemcpy(bx, globs.dbx, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
-  cudaMemcpy(cx, globs.dcx, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
-
 
 
 
@@ -219,8 +216,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
 
 
-  cudaMemcpy(by, globs.dby, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
-  cudaMemcpy(cy, globs.dcy, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   cudaMemcpy(v, globs.dv, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   cudaMemcpy(u, globs.du, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
 
