@@ -33,6 +33,8 @@ __global__ void updateParamsKernel(const unsigned g, const REAL alpha,
     int j = blockIdx.y * blockDim.y + threadIdx.y;
     int z = blockIdx.z * blockDim.z + threadIdx.z;
 
+    int numX = numM / numY;
+
     myVarX[z*numM+j*numX+i] = exp(2.0*(beta*log(myX[j])+myY[i]-0.5*nu*nu*myTimeline[g]));
     myVarY[z* numM + i * numY + j] =exp(2.0*(  alpha*log(myX[i])+myY[j]- 0.5*nu*nu*myTimeline[g] ));
 }
