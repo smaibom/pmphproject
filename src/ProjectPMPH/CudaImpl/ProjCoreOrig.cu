@@ -1,6 +1,9 @@
 #include "ProjHelperFun.h"
 #include "Constants.h"
 #include "TridagPar.h"
+#include <iostream>
+
+using namespace std;
 
 #define BLOCK_SIZE 32
 
@@ -27,7 +30,9 @@ void setPayoff_cuda(PrivGlobs& globs, unsigned int outer)
     dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
     dim3 numBlocks(globs.numX / BLOCK_SIZE, globs.numY / BLOCK_SIZE, outer);
 	
+	cout<<"d1"<<endl;
   	setPayoffKernel<<<numBlocks, threadsPerBlock>>>(myX_d, myResult_d, globs.numX, globs.numY);
+	cout<<"d2"<<endl;
 	
 	free(globs.myResult);
 	cudaMemcpy(globs.myResult, myResult_d , outer*globs.numX*globs.numX*sizeof(REAL), cudaMemcpyDeviceToHost);
