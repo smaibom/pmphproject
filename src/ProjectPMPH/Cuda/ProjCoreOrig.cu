@@ -27,10 +27,7 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
   int numM = numX*numY;
 
   //Device memory
-  cudaMemcpy(globs.dmyY, globs.myY, numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  cudaMemcpy(globs.dmyTimeline, globs.myTimeline, numT * sizeof(REAL), cudaMemcpyHostToDevice);
-  cudaMemcpy(globs.dmyX, globs.myX, numX * sizeof(REAL), cudaMemcpyHostToDevice);
-
+  
   dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
   dim3 numBlocks(numX / BLOCK_SIZE, numY / BLOCK_SIZE, outer);
   updateParamsKernel<<< numBlocks, threadsPerBlock >>> (g, alpha, beta, nu, globs.dmyVarX, 
@@ -171,23 +168,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 {
   unsigned numZ = max(numX,numY);
   unsigned numM = numX * numY;
-
-  REAL* u = (REAL*) malloc(sizeof(REAL) * outer * numY * numX);   // [outer][numY][numX]
-  REAL* v = (REAL*) malloc(sizeof(REAL) * outer * numX * numY);   // [outer][numX][numY]
-  REAL* ax = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numY][numX]
-  REAL* bx = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numY][numX]
-  REAL* cx = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numY][numX]
-  REAL* ay = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
-  REAL* by = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
-  REAL* cy = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
-  REAL* y = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numZ][numZ]
-  REAL* yy = (REAL*) malloc(sizeof(REAL)*outer*numZ); // [outer][numZ]
-
-  //Device memory
-
-  //cudaMemcpy(globs.dmyResult, globs.myResult, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  //cudaMemcpy(globs.dmyVarY, globs.myVarY, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-
+  
   dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
   dim3 numBlocks(numX / BLOCK_SIZE, numY / BLOCK_SIZE, outer);
 
@@ -224,20 +205,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
          globs.dmyResult,
          globs.duu );
   
-
-
-  /* Free Memory */
-
-  
-  free(u);
-  free(ax);
-  free(ay);
-  free(bx);
-  free(by);
-  free(cx);
-  free(cy);
-  free(yy);
-  free(y);
 }
 
 
@@ -258,7 +225,10 @@ void   run_OrigCPU(const unsigned int& outer,const unsigned int& numX,
 
   cudaMemcpy(globs.dmyDxx, globs.myDxx, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
   cudaMemcpy(globs.dmyDyy, globs.myDyy, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
-  
+  cudaMemcpy(globs.dmyY, globs.myY, numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  cudaMemcpy(globs.dmyTimeline, globs.myTimeline, numT * sizeof(REAL), cudaMemcpyHostToDevice);
+  cudaMemcpy(globs.dmyX, globs.myX, numX * sizeof(REAL), cudaMemcpyHostToDevice);
+
 
   for(int g = numT-2;g>=0;--g)
     {
