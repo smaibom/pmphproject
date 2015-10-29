@@ -25,15 +25,15 @@ void setPayoff_cuda(PrivGlobs& globs, unsigned int outer)
  	cudaMemcpy(myX_d, globs.myX, globs.numX*sizeof(REAL ), cudaMemcpyHostToDevice);
 	
     dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
-    dim3 numBlocks(numX / BLOCK_SIZE, numY / BLOCK_SIZE, outer);
+    dim3 numBlocks(globs.numX / BLOCK_SIZE, globs.numY / BLOCK_SIZE, outer);
 	
   	setPayoffKernel<<<numBlocks, threadsPerBlock>>>(myX_d, myResult_d, globs.numX, globs.numY);
 	
 	free(globs.myResult);
 	cudaMemcpy(globs.myResult, myResult_d , outer*globs.numX*globs.numX*sizeof(REAL), cudaMemcpyDeviceToHost);
 	
-	freeCuda(myX_d);
-	freeCuda(myResult_d);
+	cudaFree(myX_d);
+	cudaFree(myResult_d);
 }
 
 __global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, REAL* myDxx, REAL* myResult,
