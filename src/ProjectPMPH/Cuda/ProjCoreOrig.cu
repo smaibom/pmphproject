@@ -56,8 +56,6 @@ __global__ void setPayoffKernel(REAL* myX, REAL*   myResult, unsigned int numX, 
 
 void setPayoff_cuda(PrivGlobs& globs, unsigned int outer)
 { 
-    REAL* myResult_d;
-  cudaMemcpy(globs.dmyX, globs.myX, globs.numX*sizeof(REAL ), cudaMemcpyHostToDevice);
   
     dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
     dim3 numBlocks(globs.numX / BLOCK_SIZE, globs.numY / BLOCK_SIZE, outer);
@@ -187,10 +185,8 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
   //Device memory
 
-
-
-  cudaMemcpy(globs.dmyResult, globs.myResult, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  cudaMemcpy(globs.dmyVarY, globs.myVarY, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  //cudaMemcpy(globs.dmyResult, globs.myResult, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  //cudaMemcpy(globs.dmyVarY, globs.myVarY, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
 
   dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
   dim3 numBlocks(numX / BLOCK_SIZE, numY / BLOCK_SIZE, outer);
@@ -199,24 +195,11 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   rollback_x<<< numBlocks, threadsPerBlock >>> (globs.dax, globs.dbx, globs.dcx, globs.du, globs.dmyVarX, globs.dmyDxx, globs.dmyResult,
             dtInv, numX, numY);
 
-
-
-
-  cudaMemcpy(globs.dmyDyy, globs.myDyy, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
-
-
   numBlocks.x = numY / BLOCK_SIZE;
   numBlocks.y = numX / BLOCK_SIZE;
-
-
-
+  cudaThreadSynchronize();
   rollback_y<<< numBlocks, threadsPerBlock >>> (globs.day, globs.dby, globs.dcy, globs.du, globs.dv, globs.dmyVarY, globs.dmyDyy, globs.dmyResult,
             dtInv, numX, numY);
-
-
-
-  cudaMemcpy(v, globs.dv, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
-  cudaMemcpy(u, globs.du, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
 
   cudaThreadSynchronize();
   tridagCUDAWrapper( numY,
@@ -228,40 +211,9 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
          numX,
          globs.du,
          globs.duu );
-/*
-
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
-  for(int o = 0; o < outer; o++) 
-  {
-    for(int j=0;j<numY;j++) 
-      {
-      // here yy should have size [numX]
-      tridagPar(&ax[o * numX * numY + j * numX],&bx[o * numX * numY + j * numX],
-                &cx[o * numX * numY + j * numX], &u[o * numX * numY + j * numX], 
-                numX, &u[o * numX * numY + numX * j], &yy[o*numZ]);
-    }
-  }
-
-*/
-
-  //cudaMemcpy(globs.du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
   rollback_implicit_y<<< numBlocks, threadsPerBlock >>> (globs.dy, globs.du, globs.dv,
             dtInv, numX, numY);
-  cudaMemcpy(y, globs.dy, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
-
-  // for(int o = 0; o < outer; o++)
-  // {
-  //   REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
-  //   for(int i=0;i<numX;i++)
-  //   {
-  //     for(int j=0;j<numY;j++)
-  //     {  // here a, b, c should have size [numY]
-  //       y[o * numX * numY + i * numY + j] =
-  //         dtInv*u[o * numX * numY + j * numX + i]
-  //          -0.5*v[o * numX * numY + i * numY + j];
-  //     }
-  //   }
-  // }
+  cudaThreadSynchronize();
   tridagCUDAWrapper( numY,
          globs.day,
          globs.dby,
@@ -272,20 +224,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
          globs.dmyResult,
          globs.duu );
   
-  cudaMemcpy(globs.myResult, globs.dmyResult, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
-  /*
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
-  for(int o = 0; o < outer; o++)
-  {
-    for(int i=0;i<numX;i++)
-    {
-      // here yy should have size [numY]
-      tridagPar(&ay[o * numX * numY + i * numY],&by[o * numX * numY + i * numY],
-                &cy[o * numX * numY + i * numY],&y[o * numX * numY + i * numY],
-                numY,&globs.myResult[o * numM + i * numY],&yy[o*numZ]);
-    }
-  }
-*/
+
 
   /* Free Memory */
 
@@ -313,10 +252,12 @@ void   run_OrigCPU(const unsigned int& outer,const unsigned int& numX,
   initOperator(globs.myX, globs.numX, globs.myDxx);
   initOperator(globs.myY, globs.numY, globs.myDyy);
 
+  cudaMemcpy(globs.dmyX, globs.myX, globs.numX*sizeof(REAL ), cudaMemcpyHostToDevice);
 
   setPayoff_cuda(globs, outer);
 
   cudaMemcpy(globs.dmyDxx, globs.myDxx, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
+  cudaMemcpy(globs.dmyDyy, globs.myDyy, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
   
 
   for(int g = numT-2;g>=0;--g)
@@ -325,6 +266,9 @@ void   run_OrigCPU(const unsigned int& outer,const unsigned int& numX,
       cudaThreadSynchronize();
       rollback(g, globs, outer, numX, numY);
     }
+
+  cudaMemcpy(globs.myResult, globs.dmyResult, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+  
   for (unsigned int i = 0; i < outer; i++) 
   {
     res[i] = globs.myResult[i * globs.numM + globs.myXindex * numY + globs.myYindex];
