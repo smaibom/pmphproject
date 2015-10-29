@@ -1,11 +1,11 @@
-#include "ProjHelperFun.cu.h"
+#include "ProjHelperFun.h"
 #include "Constants.h"
 #include "TridagPar.h"
 
 
 
 __global__ void updateParamsKernel(const unsigned g, const REAL alpha, 
-                                   const REAL beta, const REAL nu, REAL* myVarX
+                                   const REAL beta, const REAL nu, REAL* myVarX,
                                    REAL* myVarY, REAL* myY, REAL* myX, 
                                    REAL* myTimeline,const int numY, const int numM){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -22,6 +22,7 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
   int numX = globs.numX;
   int numY = globs.numY;
   int numT = globs.numT;
+  int numM = numX*numY;
 
 
   for( unsigned o = 0; o < outer; ++ o )
