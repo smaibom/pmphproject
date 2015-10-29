@@ -13,7 +13,7 @@ __global__ void updateParamsKernel(const unsigned g, const REAL alpha,
     int z = blockIdx.z * blockDim.z + threadIdx.z;
 
     myVarX[z*numM+i*numY+j] = exp(2.0*(beta*log(myX[i])+myY[j]-0.5*nu*nu*myTimeline[g]));
-
+    myVarY[o * numM + i * numY + j] =exp(2.0*(  alpha*log(myX[i])+myY[j]- 0.5*nu*nu*myTimeline[g] ));
 }
 
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, 
@@ -24,7 +24,7 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
   int numT = globs.numT;
   int numM = numX*numY;
 
-
+/*
   for( unsigned o = 0; o < outer; ++ o )
         {
           for(unsigned i=0;i<globs.numX;++i)
@@ -33,17 +33,18 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
                 {
                   /*globs.myVarX[o * globs.numM + i * globs.numY + j] = 
                     exp(2.0*(  beta*log(globs.myX[i])+ globs.myY[j]
-                        - 0.5*nu*nu*globs.myTimeline[g]));*/
+                        - 0.5*nu*nu*globs.myTimeline[g]));
                   globs.myVarY[o * globs.numM + i * globs.numY + j] = 
                     exp(2.0*(  alpha*log(globs.myX[i])+ globs.myY[j]
                         - 0.5*nu*nu*globs.myTimeline[g] )); // nu*nu
                 }
             }
         }
-
+*/
     //Device memory
   REAL* dmyTimeline,* dmyX,* dmyY,* dmyVarX, *dmyVarY;
   cudaMalloc((void**)&dmyVarX, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&dmyVarY, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&dmyX, numX * sizeof(REAL));
   cudaMalloc((void**)&dmyY, numY * sizeof(REAL));
   cudaMalloc((void**)&dmyTimeline, numT * sizeof(REAL));
@@ -58,6 +59,7 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
                                                         dmyVarX, dmyVarY, dmyY,dmyX,dmyTimeline,numY,numX*numY);
 
   cudaMemcpy(globs.myVarX, dmyVarX, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaMemcpy(globs.myVarY, dmyVarY, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   REAL* myVarXNew = (REAL*) malloc(sizeof(REAL) * globs.numX * globs.numY * outer);
   transpose(globs.myVarX,myVarXNew,globs.numX,globs.numY,outer);
   free(globs.myVarX);
