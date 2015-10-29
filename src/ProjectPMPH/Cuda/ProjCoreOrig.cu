@@ -55,7 +55,8 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
   cudaMemcpy(globs.myVarX, globs.dmyVarX, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   //REAL* myVarXNew = (REAL*) malloc(sizeof(REAL) * globs.numX * globs.numY * outer);
   const int T = BLOCK_SIZE;
-  tilling_transpose_kernel<T><<<numBlocks,threadsPerBlock>>>(globs.dmyVarX,globs.tmp,globs.numY,globs.numX);
+
+  tilling_transpose_kernel<T><<<numBlocks,threadsPerBlock>>>(globs.dmyVarX,globs.tmp,globs.numX,globs.numY);
   //free(globs.myVarX);
   //globs.myVarX = myVarXNew;
   REAL* tmp = globs.dmyVarX;
