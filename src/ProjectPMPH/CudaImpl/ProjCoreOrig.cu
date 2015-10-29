@@ -36,9 +36,10 @@ void setPayoff_cuda(PrivGlobs& globs, unsigned int outer)
 	
 	free(globs.myResult);
 	cudaMemcpy(globs.myResult, myResult_d , outer*globs.numX*globs.numX*sizeof(REAL), cudaMemcpyDeviceToHost);
-	
+		cout<<"d3"<<endl;
 	cudaFree(myX_d);
 	cudaFree(myResult_d);
+		cout<<"d4"<<endl;
 }
 
 __global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, REAL* myDxx, REAL* myResult,
