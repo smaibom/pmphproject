@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../include/Constants.h"
+#include <cuda_runtime.h>
 
 using namespace std;
 
