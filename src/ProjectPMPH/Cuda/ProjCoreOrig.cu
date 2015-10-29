@@ -4,6 +4,25 @@
 
 #define BLOCK_SIZE 32
 
+template <int T>
+__global__ void tilling_transpose_kernel(float *m_in, float *m_out, int rows ,int collums) {
+    __shared__ float tile[T][T+1];
+    int i = threadIdx.y;
+    int j = threadIdx.x;
+    int z = blockIdx.z;
+    int ii = blockIdx.y*T+i;
+    int jj = blockIdx.x*T+j;
+    if(ii < rows && jj < collums ) {
+        tile[i][j] = m_in[z*rows*collums+ii*collums+jj];
+    } 
+    __syncthreads();
+    ii = blockIdx.y*T+j;
+    jj = blockIdx.x*T+i;
+    if( jj < collums && ii < rows){
+        m_out[z*rows*collums+jj*rows+ii] = tile[j][i];
+    }
+
+}
 
 
 __global__ void updateParamsKernel(const unsigned g, const REAL alpha, 
@@ -34,11 +53,16 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
                                                         globs.dmyVarY, globs.dmyY,globs.dmyX,globs.dmyTimeline,numY,numX*numY);
 
   cudaMemcpy(globs.myVarX, globs.dmyVarX, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
-  REAL* myVarXNew = (REAL*) malloc(sizeof(REAL) * globs.numX * globs.numY * outer);
-  transpose(globs.myVarX,myVarXNew,globs.numX,globs.numY,outer);
-  free(globs.myVarX);
-  globs.myVarX = myVarXNew;
-  cudaMemcpy(globs.dmyVarX, globs.myVarX, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  //REAL* myVarXNew = (REAL*) malloc(sizeof(REAL) * globs.numX * globs.numY * outer);
+  const int T = BLOCK_SIZE;
+  tilling_transpose_kernel<T><<<numBlocks,threadsPerBlock>>>(globs.dmyVarX,globs.tmp,globs.numY,globs.numX);
+  //free(globs.myVarX);
+  //globs.myVarX = myVarXNew;
+  REAL* tmp = globs.dmyVarX;
+  globs.dmyVarX = globs.tmp;
+  globs.tmp = tmp;
+
+  //cudaMemcpy(globs.dmyVarX, globs.myVarX, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
   
 }
 
@@ -168,7 +192,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 {
   unsigned numZ = max(numX,numY);
   unsigned numM = numX * numY;
-  
+
   dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
   dim3 numBlocks(numX / BLOCK_SIZE, numY / BLOCK_SIZE, outer);
 

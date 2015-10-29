@@ -60,6 +60,9 @@ struct PrivGlobs {
   REAL* dyy;
   REAL* duu;
 
+  //tmp transposition array [outer][numX][numY]
+  REAL* tmp;
+
   PrivGlobs( ) {
     printf("Invalid Contructor: need to provide the array sizes! EXITING...!\n");
     exit(0);
@@ -106,6 +109,7 @@ struct PrivGlobs {
     cudaMalloc((void**)&this->dy, outer * numY * numX * sizeof(REAL));
     cudaMalloc((void**)&this->dmyDyy, outer * numY * 4 * sizeof(REAL));
     cudaMalloc((void**)&this->duu, outer * numX * numY * sizeof(REAL));
+    cudaMalloc((void**)&this->tmp, outer * numX * numY * sizeof(REAL));
   } 
 } __attribute__ ((aligned (128)));
 
