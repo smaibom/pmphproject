@@ -6,6 +6,36 @@
 
 //Kernels
 
+__global__ void setPayoffKernel(REAL* myX, REAL*   myResult, unsigned int numX, unsigned int numY) {
+    int i = BLOCK_SIZE * blockIdx.x + threadIdx.x;
+    int j = BLOCK_SIZE * blockIdx.y + threadIdx.y;
+    int o = blockIdx.z;
+	
+    myResult[o * (numY * numX) + i * numY + j] = 
+      max(myX[i] - o * 0.001, (REAL)0.0);
+}
+
+void setPayoff_cuda(PrivGlobs& globs, unsigned int outer)
+{	
+	REAL* myX_d;
+  	REAL* myResult_d;
+  	cudaMalloc((void**)&myX_d, globs.numX*sizeof(REAL ));
+  	cudaMalloc((void**)&myResult_d, outer*globs.numX*globs.numX*sizeof(REAL));
+  
+ 	cudaMemcpy(myX_d, globs.myX, globs.numX*sizeof(REAL ), cudaMemcpyHostToDevice);
+	
+    dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
+    dim3 numBlocks(numX / BLOCK_SIZE, numY / BLOCK_SIZE, outer);
+	
+  	setPayoffKernel<<<numBlocks, threadsPerBlock>>>(myX_d, myResult_d, globs.numX, globs.numY);
+	
+	free(globs.myResult);
+	cudaMemcpy(globs.myResult, myResult_d , outer*globs.numX*globs.numX*sizeof(REAL), cudaMemcpyDeviceToHost);
+	
+	freeCuda(myX_d);
+	freeCuda(myResult_d);
+}
+
 __global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, REAL* myDxx, REAL* myResult,
                            REAL dtInv, int numX, int numY) {
 
