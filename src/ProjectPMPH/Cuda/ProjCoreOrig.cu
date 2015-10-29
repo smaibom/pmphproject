@@ -188,9 +188,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
 
 
-  cudaMemcpy(globs.dmyResult, globs.myResult, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  cudaMemcpy(globs.dmyVarX, globs.myVarX, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  cudaMemcpy(globs.dmyDxx, globs.myDxx, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
 
   dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
   dim3 numBlocks(numX / BLOCK_SIZE, numY / BLOCK_SIZE, outer);
@@ -202,7 +199,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
 
 
-  cudaMemcpy(globs.dmyVarY, globs.myVarY, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
   cudaMemcpy(globs.dmyDyy, globs.myDyy, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
 
 
@@ -322,6 +318,7 @@ void   run_OrigCPU(const unsigned int& outer,const unsigned int& numX,
   for(int g = numT-2;g>=0;--g)
     {
       updateParams(g,alpha,beta,nu,globals, outer);
+      cudaThreadSynchronize();
       rollback(g, globals, outer, numX, numY);
     }
   for (unsigned int i = 0; i < outer; i++) 
