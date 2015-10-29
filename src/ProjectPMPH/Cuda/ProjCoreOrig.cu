@@ -101,6 +101,46 @@ inline void tridag(REAL* a,REAL* b,REAL* c,const REAL* r,const int n,
 #endif
 }
 
+__global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, REAL* myDxx, REAL* myResult,
+                           REAL dtInv, int numX, int numY) {
+
+  int i = BLOCK_SIZE * blockIdx.x + threadIdx.x;
+  int j = BLOCK_SIZE * blockIdx.y + threadIdx.y;
+  int o = blockIdx.z;
+
+  int numM = numY * numX;
+
+  ax[o * numX * numY + j * numX + i] = -0.5*(0.5*myVarX[o * numM + j * numX + i]*myDxx[i * 4 + 0]);
+
+  bx[o * numX * numY + j * numX + i] =
+    dtInv - 0.5*(0.5*myVarX[o * numM + j * numX + i]
+                 *myDxx[i * 4 + 1]);
+  cx[o * numX * numY + j * numX + i] =
+    -0.5*(0.5*myVarX[o * numM + j * numX + i]
+          *myDxx[i * 4 + 2]);
+  //  explicit x
+  u[o * numX * numY + j * numX + i] =
+    dtInv*myResult[o * numM + i * numY + j];
+
+  if(i > 0) {
+      u[o * numX * numY + j * numX + i] +=
+        0.5*(0.5*myVarX[o * numM + + j * numX + i]
+             *myDxx[i * 4 + 0])
+        *myResult[o * numM + (i-1) * numY + j];
+    }
+
+  u[o * numX * numY + j * numX + i]  +=
+    0.5*(0.5*myVarX[o * numM + + j * numX + i]*myDxx[i * 4 + 1])
+    *myResult[o * numM + i * numY + j];
+
+  if(i < numX-1) {
+      u[o * numX * numY + j * numX + i] +=
+        0.5*(0.5*myVarX[o * numM + + j * numX + i]
+             *myDxx[i * 4 + 2])
+        *myResult[o * numM + (i+1) * numY + j];
+    }
+}
+
 
 
 __global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, REAL* myDxx, REAL* myResult,
@@ -146,8 +186,6 @@ __global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, 
 }
 
 
-
-
 void
 rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX, 
           const int& numY) 
@@ -157,15 +195,14 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
   REAL* u = (REAL*) malloc(sizeof(REAL) * outer * numY * numX);   // [outer][numY][numX]
   REAL* v = (REAL*) malloc(sizeof(REAL) * outer * numX * numY);   // [outer][numX][numY]
-  REAL* ax = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numZ][numZ]
-  REAL* bx = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numZ][numZ]
-  REAL* cx = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numZ][numZ]
-  REAL* ay = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numZ][numZ]
-  REAL* by = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numZ][numZ]
-  REAL* cy = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numZ][numZ]
-  REAL* y = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numZ][numZ]
+  REAL* ax = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numY][numX]
+  REAL* bx = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numY][numX]
+  REAL* cx = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numY][numX]
+  REAL* ay = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
+  REAL* by = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
+  REAL* cy = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
+  REAL* y = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numZ][numZ]
   REAL* yy = (REAL*) malloc(sizeof(REAL)*outer*numZ); // [outer][numZ]
-
 
   //Device memory
   REAL* dax,* dbx,* dcx,* du,* dmyVarX,* dmyDxx,* dmyResult;
@@ -197,87 +234,102 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaMemcpy(cx, dcx, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
 
 
+  REAL* dv,* dmyVarY,* dmyDyy,* day,* dby,* dcy;
+
+  cudaMalloc((void**)&day, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&dby, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&dcy, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&dv, outer * numX * numY * sizeof(REAL));
+
+  cudaMalloc((void**)&dmyVarY, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&dmyDyy, outer * numY * 4 * sizeof(REAL));
 
 
-  for (int o = 0; o < outer; o++) 
-  {
-    REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
-    unsigned i, j;
-    // Y-Loop
-    for(i=0;i<numX;i++) 
-    {
-      for(j=0;j<numY;j++)
-        {
-          // Explicit y
-          v[o * numX * numY + i * numY + j] = 0.0;
-          if(j > 0) 
-          {
-            v[o * numX * numY + i * numY + j] +=  
-              (0.5*globs.myVarY[o * numM + i * numY + j]*globs.myDyy[j * 4 + 0])
-                  *globs.myResult[o * numM + i * numY + j-1];
-          }
+  cudaMemcpy(dmyVarY, globs.myVarY, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  cudaMemcpy(dmyDyy, globs.myDyy, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
 
-          v[o * numX * numY + i * numY + j] += 
-            (0.5*globs.myVarY[o * numM + i * numY + j]
-                *globs.myDyy[j * 4 + 1])
-                *globs.myResult[o * numM + i  * numY + j];
 
-          if(j < numY-1) 
-          {
-            v[o * numX * numY + i * numY + j] +=  
-              (0.5*globs.myVarY[o * numM + i * numY + j]
-                  *globs.myDyy[j * 4 + 2])
-                  *globs.myResult[o * numM + i * numY + j+1];
-          }
-          u[o * numX * numY + j * numX + i] += v[o * numX * numY + i * numY + j];
-          // Implicit y
-          ay[o * numZ * numZ + i * numZ + j] =
-            -0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
-                     *globs.myDyy[j * 4 + 0]);
-          by[o * numZ * numZ + i * numZ + j] = 
-            dtInv - 0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
-                            *globs.myDyy[j * 4 + 1]);
-          cy[o * numZ * numZ + i * numZ + j] =
-            -0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
-                     *globs.myDyy[j * 4 + 2]);
-        }
-    }
-  }
+  numBlocks.x = numY / BLOCK_SIZE;
+  numBlocks.y = numX / BLOCK_SIZE;
+
+  rollback_y<<< numBlocks, threadsPerBlock >>> (day, dby, dcy, du, dv, dmyVarY, dmyDyy, dmyResult,
+            dtInv, numX, numY);
+
+  cudaMemcpy(ay, day, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaMemcpy(by, dby, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaMemcpy(cy, dcy, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaMemcpy(v, dv, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaMemcpy(u, du, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+
+
+
+#pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for(int o = 0; o < outer; o++) 
   {
     for(int j=0;j<numY;j++) 
       {
       // here yy should have size [numX]
-      tridagPar(&ax[o * numZ * numZ + j * numZ],&bx[o * numZ * numZ + j * numZ],
-                &cx[o * numZ * numZ + j * numZ], &u[o * numX * numY + j * numX], 
+      tridagPar(&ax[o * numX * numY + j * numX],&bx[o * numX * numY + j * numX],
+                &cx[o * numX * numY + j * numX], &u[o * numX * numY + j * numX], 
                 numX, &u[o * numX * numY + numX * j], &yy[o*numZ]);
     }
   }
 
-  //  implicit y
-  for(int o = 0; o < outer; o++) 
+
+  REAL* dy;
+
+  cudaMalloc((void**)&dy, outer * numY * numX * sizeof(REAL));
+
+
+  cudaMemcpy(du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  rollback_implicit_y<<< numBlocks, threadsPerBlock >>> (dy, du, dv,
+            dtInv, numX, numY);
+  cudaMemcpy(y, dy, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+
+  // for(int o = 0; o < outer; o++)
+  // {
+  //   REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
+  //   for(int i=0;i<numX;i++)
+  //   {
+  //     for(int j=0;j<numY;j++)
+  //     {  // here a, b, c should have size [numY]
+  //       y[o * numX * numY + i * numY + j] =
+  //         dtInv*u[o * numX * numY + j * numX + i]
+  //          -0.5*v[o * numX * numY + i * numY + j];
+  //     }
+  //   }
+  // }
+
+#pragma omp parallel for default(shared) schedule(static) if(outer>8)
+  for(int o = 0; o < outer; o++)
   {
-    REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
-    for(int i=0;i<numX;i++) 
-    {
-      for(int j=0;j<numY;j++) 
-      {  // here a, b, c should have size [numY]
-        y[o * numZ * numZ + i * numZ +j] = 
-          dtInv*u[o * numX * numY + j * numX + i]
-           -0.5*v[o * numX * numY + i * numY + j];
-      }
-    }
-  }
-  for(int o = 0; o < outer; o++) 
-  {
-    for(int i=0;i<numX;i++) 
+    for(int i=0;i<numX;i++)
     {
       // here yy should have size [numY]
-      tridagPar(&ay[o * numZ * numZ + i * numZ],&by[o * numZ * numZ + i * numZ],
-                &cy[o * numZ * numZ + i * numZ],&y[o * numZ * numZ + i * numZ],
+      tridagPar(&ay[o * numX * numY + i * numY],&by[o * numX * numY + i * numY],
+                &cy[o * numX * numY + i * numY],&y[o * numX * numY + i * numY],
                 numY,&globs.myResult[o * numM + i * numY],&yy[o*numZ]);
     }
   }
+
+
+  /* Free Memory */
+
+  cudaFree(dax);
+  cudaFree(dbx);
+  cudaFree(dcx);
+  cudaFree(du);
+  cudaFree(dmyVarX);
+  cudaFree(dmyDxx);
+  cudaFree(dmyResult);
+  cudaFree(dv);
+  cudaFree(dmyVarY);
+  cudaFree(dmyDyy);
+  cudaFree(day);
+  cudaFree(dby);
+  cudaFree(dcy);
+  
+  
   free(u);
   free(ax);
   free(ay);
