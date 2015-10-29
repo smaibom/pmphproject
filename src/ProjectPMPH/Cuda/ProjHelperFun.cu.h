@@ -62,19 +62,19 @@ struct PrivGlobs {
     this->numT = numT;
     this->numM = numX * numY;
     this->myX = (REAL*) malloc(sizeof(REAL) * numX);
-    this->dmyX = cudaMalloc((void**)&this->dmyX, numX * sizeof(REAL));
+    cudaMalloc((void**)&this->dmyX, numX * sizeof(REAL));
     this->myDxx = (REAL*) malloc(sizeof(REAL) * numX * 4);
     this->myY  = (REAL*) malloc(sizeof(REAL) * numY);
-    this->dmyY = cudaMalloc((void**)&this->dmyY, numY * sizeof(REAL));
+    cudaMalloc((void**)&this->dmyY, numY * sizeof(REAL));
     this->myDyy = (REAL*) malloc(sizeof(REAL) * numY * 4);
 
     this->myTimeline = (REAL*) malloc(sizeof(REAL) * numT);
-    this->dmyTimeline = cudaMalloc((void**)&this->dmyTimeline, numT * sizeof(REAL));
+    cudaMalloc((void**)&this->dmyTimeline, numT * sizeof(REAL));
 
     this->  myVarX = (REAL*) malloc(sizeof(REAL) * numX * numY * outer);
     this->  myVarY = (REAL*) malloc(sizeof(REAL) * numX * numY * outer);
-    this->dmyVarX = cudaMalloc((void**)&this->dmyVarX, outer * numX * numY * sizeof(REAL));
-    this->dmyVarY = cudaMalloc((void**)&this->dmyVarY, outer * numX * numY * sizeof(REAL));
+    cudaMalloc((void**)&this->dmyVarX, outer * numX * numY * sizeof(REAL));
+    cudaMalloc((void**)&this->dmyVarY, outer * numX * numY * sizeof(REAL));
     this->myResult = (REAL*) malloc(sizeof(REAL) * numX * numY * outer);
 
   }
