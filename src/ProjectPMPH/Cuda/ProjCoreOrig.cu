@@ -1,39 +1,29 @@
-#include "ProjHelperFun.h"
+#include "ProjHelperFun.cu.h"
 #include "Constants.h"
 #include "TridagPar.h"
 
-#define BLOCK_SIZE 32
 
 
-/*Only works on small dataset, no bounds checking*/
-__global__ void updateParamsKernel(const int numM,const int numY,const unsigned g,
-                                   const REAL nu, REAL* myVarX,REAL* myX, REAL* myY,
-                                   REAL* myTimeline, REAL beta){
+__global__ void updateParamsKernel(const unsigned g, const REAL alpha, 
+                                   const REAL beta, const REAL nu, REAL* myVarX
+                                   REAL* myVarY, REAL* myY, REAL* myX, 
+                                   REAL* myTimeline,const int numY, const int numM){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
-    int o = blockIdx.z * blockDim.z + threadIdx.z;
+    int z = blockIdx.z * blockDim.z + threadIdx.z;
 
-    myVarX[o * numM + i * numY + j] = exp(2.0*(beta*log(myX[i])+ myY[j]
-                        - 0.5*nu*nu*myTimeline[g]));
+    myVarX[z*numM+i*numY+j] = exp(2.0*(beta*log(myX[i])+myY[j]-0.5*nu*nu*myTimeline[g]));
+
 }
-
 
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, 
                   const REAL nu, PrivGlobs& globs, const int outer)
 {
-  REAL* myVarX, myX, myY, myTimeline;
-  dim3 block(BLOCK_SIZE,BLOCK_SIZE,1), grid(globs.numX/BLOCK_SIZE,globs.numY/BLOCK_SIZE,outer);
-  cudaMalloc((void**)&myVarX, sizeof(REAL)*outer*globs.numM);
-  cudaMalloc((void**)&myX, sizeof(REAL)*globs.numX);
-  cudaMalloc((void**)&myY, sizeof(REAL)*globs.numY);
-  cudaMalloc((void**)&myTimeline, sizeof(REAL)*globs.numT);
-
-  cudaMemcpy(myX, globs.myX, sizeof(REAL)*globs.numX, cudaMemcpyHostToDevice);
-  cudaMemcpy(myY, globs.myY, sizeof(REAL)*globs.numY, cudaMemcpyHostToDevice);
-  cudaMemcpy(myTimeline, globs.myTimeline, sizeof(REAL)*globs.numT, cudaMemcpyHostToDevice);
+  int numX = globs.numX;
+  int numY = globs.numY;
+  int numT = globs.numT;
 
 
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for( unsigned o = 0; o < outer; ++ o )
         {
           for(unsigned i=0;i<globs.numX;++i)
@@ -50,10 +40,25 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
             }
         }
 
-  updateParamsKernel<<<grid,block>>>(globs.numM,)
+    //Device memory
+  REAL* dmyTimeline, dmyX,* dmyY,* dmyVarX;
+  cudaMalloc((void**)&dmyVarX, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&dmyX, numX * sizeof(REAL));
+  cudaMalloc((void**)&dmyY, numY * sizeof(REAL));
+  cudaMalloc((void**)&dmyTimeline, numT * sizeof(REAL));
 
-  cudaMemcpy(m_out, d_out, sizeof(REAL)*outer*globs.numM, cudaMemcpyDeviceToHost);
+  cudaMemcpy(dmyY, globs.myY, numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  cudaMemcpy(dmyTimeline, globs.myTimeline, numT * sizeof(REAL), cudaMemcpyHostToDevice);
+  cudaMemcpy(dmyX, globs.myX, numX * sizeof(REAL), cudaMemcpyHostToDevice);
 
+  dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
+  dim3 numBlocks(numX / BLOCK_SIZE, numY / BLOCK_SIZE, outer);
+  updateParamsKernel<<< numBlocks, threadsPerBlock >>> (g, alpha, beta, nu, 
+                                                        dmyVarX, dmyVarY, dmyY,dmyX,dmyTimeline,numY,numX*numY);
+
+            dtInv, numX, numY);
+  cudaThreadSyncronice();
+  cudaMemcpy(globs.myVarX, dmyVarX, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   REAL* myVarXNew = (REAL*) malloc(sizeof(REAL) * globs.numX * globs.numY * outer);
   transpose(globs.myVarX,myVarXNew,globs.numX,globs.numY,outer);
   free(globs.myVarX);
@@ -119,17 +124,16 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
   REAL* u = (REAL*) malloc(sizeof(REAL) * outer * numY * numX);   // [outer][numY][numX]
   REAL* v = (REAL*) malloc(sizeof(REAL) * outer * numX * numY);   // [outer][numX][numY]
-  REAL* ax = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numY][numX]
-  REAL* bx = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numY][numX]
-  REAL* cx = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numY][numX]
-  REAL* ay = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
-  REAL* by = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
-  REAL* cy = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numX][numY]
-  REAL* y = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numZ][numZ]
+  REAL* ax = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numZ][numZ]
+  REAL* bx = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numZ][numZ]
+  REAL* cx = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numZ][numZ]
+  REAL* ay = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numZ][numZ]
+  REAL* by = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numZ][numZ]
+  REAL* cy = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numZ][numZ]
+  REAL* y = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numZ][numZ]
   REAL* yy = (REAL*) malloc(sizeof(REAL)*outer*numZ); // [outer][numZ]
 
 // X-loop
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for (int o = 0; o < outer; o++) 
   {
     REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
@@ -138,13 +142,13 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
       for(int i=0;i<numX;i++) 
       {
         // implicit x
-        ax[o * numX * numY + j * numX + i] = 
+        ax[o * numZ * numZ + j * numZ + i] = 
           -0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
                    *globs.myDxx[i * 4 + 0]);
-        bx[o * numX * numY + j * numX + i] = 
+        bx[o * numZ * numZ + j * numZ + i] = 
           dtInv - 0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
                           *globs.myDxx[i * 4 + 1]);
-        cx[o * numX * numY + j * numX + i] =
+        cx[o * numZ * numZ + j * numZ + i] =
           -0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
                    *globs.myDxx[i * 4 + 2]);
         //  explicit x
@@ -170,7 +174,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
       }
     }
   }
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for (int o = 0; o < outer; o++) 
   {
     REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
@@ -203,53 +206,50 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
           }
           u[o * numX * numY + j * numX + i] += v[o * numX * numY + i * numY + j];
           // Implicit y
-          ay[o * numX * numY + i * numY + j] =
+          ay[o * numZ * numZ + i * numZ + j] =
             -0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
                      *globs.myDyy[j * 4 + 0]);
-          by[o * numX * numY + i * numY + j] = 
+          by[o * numZ * numZ + i * numZ + j] = 
             dtInv - 0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
                             *globs.myDyy[j * 4 + 1]);
-          cy[o * numX * numY + i * numY + j] =
+          cy[o * numZ * numZ + i * numZ + j] =
             -0.5*(0.5*globs.myVarY[o * numM + i * numY + j]
                      *globs.myDyy[j * 4 + 2]);
         }
     }
   }
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for(int o = 0; o < outer; o++) 
   {
     for(int j=0;j<numY;j++) 
       {
       // here yy should have size [numX]
-      tridagPar(&ax[o * numX * numY + j * numX],&bx[o * numX * numY + j * numX],
-                &cx[o * numX * numY + j * numX], &u[o * numX * numY + j * numX], 
+      tridagPar(&ax[o * numZ * numZ + j * numZ],&bx[o * numZ * numZ + j * numZ],
+                &cx[o * numZ * numZ + j * numZ], &u[o * numX * numY + j * numX], 
                 numX, &u[o * numX * numY + numX * j], &yy[o*numZ]);
     }
   }
 
   //  implicit y
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
-  for(int o = 0; o < outer; o++)
+  for(int o = 0; o < outer; o++) 
   {
     REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
-    for(int i=0;i<numX;i++)
+    for(int i=0;i<numX;i++) 
     {
-      for(int j=0;j<numY;j++)
+      for(int j=0;j<numY;j++) 
       {  // here a, b, c should have size [numY]
-        y[o * numX * numY + i * numY + j] =
+        y[o * numZ * numZ + i * numZ +j] = 
           dtInv*u[o * numX * numY + j * numX + i]
            -0.5*v[o * numX * numY + i * numY + j];
       }
     }
   }
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
-  for(int o = 0; o < outer; o++)
+  for(int o = 0; o < outer; o++) 
   {
-    for(int i=0;i<numX;i++)
+    for(int i=0;i<numX;i++) 
     {
       // here yy should have size [numY]
-      tridagPar(&ay[o * numX * numY + i * numY],&by[o * numX * numY + i * numY],
-                &cy[o * numX * numY + i * numY],&y[o * numX * numY + i * numY],
+      tridagPar(&ay[o * numZ * numZ + i * numZ],&by[o * numZ * numZ + i * numZ],
+                &cy[o * numZ * numZ + i * numZ],&y[o * numZ * numZ + i * numZ],
                 numY,&globs.myResult[o * numM + i * numY],&yy[o*numZ]);
     }
   }
@@ -290,51 +290,5 @@ void   run_OrigCPU(const unsigned int& outer,const unsigned int& numX,
     res[i] = globals.myResult[i * globals.numM + globals.myXindex * numY + globals.myYindex];
   }
 }
-
-//Kernels
-
-__global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, REAL* myDxx, REAL* myResult,
-                           REAL dtInv, int numX, int numY) {
-
-  int i = BLOCK_SIZE * blockIdx.x + threadIdx.x;
-  int j = BLOCK_SIZE * blockIdx.y + threadIdx.y;
-  int o = blockIdx.z;
-
-  int numM = numY * numX;
-
-  ax[o * numX * numY + j * numX + i] = -0.5*(0.5*myVarX[o * numM + j * numX + i]*myDxx[i * 4 + 0]);
-
-  bx[o * numX * numY + j * numX + i] =
-    dtInv - 0.5*(0.5*myVarX[o * numM + j * numX + i]
-                 *myDxx[i * 4 + 1]);
-  cx[o * numX * numY + j * numX + i] =
-    -0.5*(0.5*myVarX[o * numM + j * numX + i]
-          *myDxx[i * 4 + 2]);
-  //  explicit x
-  u[o * numX * numY + j * numX + i] =
-    dtInv*myResult[o * numM + i * numY + j];
-
-  if(i > 0) {
-      u[o * numX * numY + j * numX + i] +=
-        0.5*(0.5*myVarX[o * numM + + j * numX + i]
-             *myDxx[i * 4 + 0])
-        *myResult[o * numM + (i-1) * numY + j];
-    }
-
-  u[o * numX * numY + j * numX + i]  +=
-    0.5*(0.5*myVarX[o * numM + + j * numX + i]*myDxx[i * 4 + 1])
-    *myResult[o * numM + i * numY + j];
-
-  if(i < numX-1) {
-      u[o * numX * numY + j * numX + i] +=
-        0.5*(0.5*myVarX[o * numM + + j * numX + i]
-             *myDxx[i * 4 + 2])
-        *myResult[o * numM + (i+1) * numY + j];
-    }
-
-
-}
-
-
 
 //#endif // PROJ_CORE_ORIG
