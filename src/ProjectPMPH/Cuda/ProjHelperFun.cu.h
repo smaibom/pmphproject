@@ -69,6 +69,7 @@ struct PrivGlobs {
     this->myX = (REAL*) malloc(sizeof(REAL) * numX);
     cudaMalloc((void**)&this->dmyX, numX * sizeof(REAL));
     this->myDxx = (REAL*) malloc(sizeof(REAL) * numX * 4);
+    cudaMalloc((void**)&this->dmyDxx, outer * numX * 4 * sizeof(REAL));
     this->myY  = (REAL*) malloc(sizeof(REAL) * numY);
     cudaMalloc((void**)&this->dmyY, numY * sizeof(REAL));
     this->myDyy = (REAL*) malloc(sizeof(REAL) * numY * 4);
