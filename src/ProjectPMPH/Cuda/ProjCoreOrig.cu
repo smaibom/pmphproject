@@ -308,26 +308,26 @@ void   run_OrigCPU(const unsigned int& outer,const unsigned int& numX,
                    const REAL& s0,const REAL& t,const REAL& alpha,
                    const REAL& nu,const REAL& beta,REAL* res) // [outer] RESULT
 {
-  PrivGlobs globals(numX, numY, numT, outer);
-  initGrid(s0,alpha,nu,t, numX, numY, numT, globals);
-  initOperator(globals.myX, globals.numX, globals.myDxx);
-  initOperator(globals.myY, globals.numY, globals.myDyy);
+  PrivGlobs globs(numX, numY, numT, outer);
+  initGrid(s0,alpha,nu,t, numX, numY, numT, globs);
+  initOperator(globs.myX, globs.numX, globs.myDxx);
+  initOperator(globs.myY, globs.numY, globs.myDyy);
 
 
-  setPayoff_cuda(globals, outer);
+  setPayoff_cuda(globs, outer);
 
   cudaMemcpy(globs.dmyDxx, globs.myDxx, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
   
 
   for(int g = numT-2;g>=0;--g)
     {
-      updateParams(g,alpha,beta,nu,globals, outer);
+      updateParams(g,alpha,beta,nu,globs, outer);
       cudaThreadSynchronize();
-      rollback(g, globals, outer, numX, numY);
+      rollback(g, globs, outer, numX, numY);
     }
   for (unsigned int i = 0; i < outer; i++) 
   {
-    res[i] = globals.myResult[i * globals.numM + globals.myXindex * numY + globals.myYindex];
+    res[i] = globs.myResult[i * globs.numM + globs.myXindex * numY + globs.myYindex];
   }
 }
 
