@@ -237,20 +237,16 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaMemcpy(cx, globs.dcx, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
 
 
-  REAL* dmyDyy;
-
-
-  cudaMalloc((void**)&dmyDyy, outer * numY * 4 * sizeof(REAL));
 
 
   cudaMemcpy(globs.dmyVarY, globs.myVarY, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  cudaMemcpy(dmyDyy, globs.myDyy, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
+  cudaMemcpy(globs.dmyDyy, globs.myDyy, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
 
 
   numBlocks.x = numY / BLOCK_SIZE;
   numBlocks.y = numX / BLOCK_SIZE;
 
-  rollback_y<<< numBlocks, threadsPerBlock >>> (globs.day, globs.dby, globs.dcy, globs.du, globs.dv, globs.dmyVarY, dmyDyy, globs.dmyResult,
+  rollback_y<<< numBlocks, threadsPerBlock >>> (globs.day, globs.dby, globs.dcy, globs.du, globs.dv, globs.dmyVarY, globs.dmyDyy, globs.dmyResult,
             dtInv, numX, numY);
 
   cudaMemcpy(ay, globs.day, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
@@ -308,8 +304,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
 
   /* Free Memory */
-  cudaFree(dmyDyy);
-  
+
   
   free(u);
   free(ax);
