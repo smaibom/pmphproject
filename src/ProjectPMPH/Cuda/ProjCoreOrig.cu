@@ -57,9 +57,8 @@ void setPayoff_cuda(PrivGlobs& globs, unsigned int outer)
 { 
   REAL* myX_d;
     REAL* myResult_d;
-    cudaMalloc((void**)&myX_d, globs.numX*sizeof(REAL ));
     cudaMalloc((void**)&myResult_d, outer*globs.numX*globs.numY*sizeof(REAL));
-  cudaMemcpy(myX_d, globs.myX, globs.numX*sizeof(REAL ), cudaMemcpyHostToDevice);
+  cudaMemcpy(globs.dmyX, globs.myX, globs.numX*sizeof(REAL ), cudaMemcpyHostToDevice);
   
     dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
     dim3 numBlocks(globs.numX / BLOCK_SIZE, globs.numY / BLOCK_SIZE, outer);
