@@ -36,7 +36,7 @@ __global__ void updateParamsKernel(const unsigned g, const REAL alpha,
     int numX = numM / numY;
 
     myVarX[z*numM+j*numX+i] = exp(2.0*(beta*log(myX[i])+myY[j]-0.5*nu*nu*myTimeline[g]));
-    myVarY[z* numM + i * numY + j] =exp(2.0*(  alpha*log(myX[i])+myY[j]- 0.5*nu*nu*myTimeline[g] ));
+    myVarY[z* numM + j * numX + i] =exp(2.0*(  alpha*log(myX[i])+myY[j]- 0.5*nu*nu*myTimeline[g] ));
 }
 
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, 
@@ -54,18 +54,14 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
   updateParamsKernel<<< numBlocks, threadsPerBlock >>> (g, alpha, beta, nu, globs.dmyVarX, 
                                                         globs.dmyVarY, globs.dmyY,globs.dmyX,globs.dmyTimeline,numY,numX*numY);
 
-  //cudaMemcpy(globs.myVarX, globs.dmyVarX, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
-  //REAL* myVarXNew = (REAL*) malloc(sizeof(REAL) * globs.numX * globs.numY * outer);
   const int T = BLOCK_SIZE;
 
   numBlocks.x = numY/BLOCK_SIZE;
   numBlocks.y = numX/BLOCK_SIZE;
-  //tilling_transpose_kernel<T><<<numBlocks,threadsPerBlock>>>(globs.dmyVarX,globs.tmp,globs.numX,globs.numY);
-  //free(globs.myVarX);
-  //globs.myVarX = myVarXNew;
-  //REAL* tmp = globs.dmyVarX;
-  //globs.dmyVarX = globs.tmp;
-  //globs.tmp = tmp;
+  tilling_transpose_kernel<T><<<numBlocks,threadsPerBlock>>>(globs.dmyVarY,globs.tmp,globs.numX,globs.numY);
+  REAL* tmp = globs.dmyVarY;
+  globs.dmyVarY = globs.tmp;
+  globs.tmp = tmp;
 
   //cudaMemcpy(globs.dmyVarX, globs.myVarX, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
   
