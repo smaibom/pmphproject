@@ -37,11 +37,12 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
                                                         globs.dmyVarY, globs.dmyY,globs.dmyX,globs.dmyTimeline,numY,numX*numY);
 
   cudaMemcpy(globs.myVarX, globs.dmyVarX, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
-  cudaMemcpy(globs.myVarY, globs.dmyVarY, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   REAL* myVarXNew = (REAL*) malloc(sizeof(REAL) * globs.numX * globs.numY * outer);
   transpose(globs.myVarX,myVarXNew,globs.numX,globs.numY,outer);
   free(globs.myVarX);
   globs.myVarX = myVarXNew;
+  cudaMemcpy(globs.dmyVarX, globs.myVarX, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  
 }
 
 __global__ void setPayoffKernel(REAL* myX, REAL*   myResult, unsigned int numX, unsigned int numY) {
@@ -188,6 +189,8 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
 
 
+  cudaMemcpy(globs.dmyResult, globs.myResult, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  cudaMemcpy(globs.dmyVarY, globs.myVarY, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
 
   dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
   dim3 numBlocks(numX / BLOCK_SIZE, numY / BLOCK_SIZE, outer);
@@ -313,7 +316,8 @@ void   run_OrigCPU(const unsigned int& outer,const unsigned int& numX,
 
   setPayoff_cuda(globals, outer);
 
-
+  cudaMemcpy(globs.dmyDxx, globs.myDxx, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
+  
 
   for(int g = numT-2;g>=0;--g)
     {
