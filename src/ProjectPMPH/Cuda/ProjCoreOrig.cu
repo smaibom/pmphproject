@@ -101,6 +101,18 @@ inline void tridag(REAL* a,REAL* b,REAL* c,const REAL* r,const int n,
 #endif
 }
 
+
+__global__ void rollback_implicit_y (REAL* y, REAL*  u, REAL* v, REAL dtInv, int numX, int numY) {
+  int j = BLOCK_SIZE * blockIdx.x + threadIdx.x;
+  int i = BLOCK_SIZE * blockIdx.y + threadIdx.y;
+  int o = blockIdx.z;
+
+  y[o * numX * numY + i * numY + j] = dtInv*u[o * numX * numY + j * numX + i]
+    - 0.5*v[o * numX * numY + i * numY + j];
+
+}
+
+
 __global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, REAL* myDxx, REAL* myResult,
                            REAL dtInv, int numX, int numY) {
 
