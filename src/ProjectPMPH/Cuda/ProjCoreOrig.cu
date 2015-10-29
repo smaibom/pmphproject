@@ -57,7 +57,9 @@ void setPayoff_cuda(PrivGlobs& globs, unsigned int outer)
 { 
   REAL* myX_d;
     REAL* myResult_d;
-    cudaMemcpy(globs.dmyX, globs.myX, globs.numX*sizeof(REAL ), cudaMemcpyHostToDevice);
+    cudaMalloc((void**)&myX_d, globs.numX*sizeof(REAL ));
+    cudaMalloc((void**)&myResult_d, outer*globs.numX*globs.numY*sizeof(REAL));
+  cudaMemcpy(myX_d, globs.myX, globs.numX*sizeof(REAL ), cudaMemcpyHostToDevice);
   
     dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
     dim3 numBlocks(globs.numX / BLOCK_SIZE, globs.numY / BLOCK_SIZE, outer);
@@ -65,7 +67,24 @@ void setPayoff_cuda(PrivGlobs& globs, unsigned int outer)
   //kernel
     setPayoffKernel<<<numBlocks, threadsPerBlock>>>(myX_d, myResult_d, globs.numX, globs.numY);
 
-    cudaMemcpy(globs.myResult, globs.dmyResult, outer*globs.numX*globs.numY*sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaMemcpy(globs.myResult, myResult_d , outer*globs.numX*globs.numY*sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaFree(myX_d);
+  cudaFree(myResult_d);
+}
+
+void setPayoff(PrivGlobs& globs, unsigned int outer)
+{
+  unsigned int myR_size = globs.numY * globs.numX;
+  for(unsigned int o = 0; o < outer; o++) {
+    for(unsigned i=0;i<globs.numX;++i)
+      {
+        for(unsigned j=0;j<globs.numY;++j)
+          {
+            globs.myResult[o * myR_size + i * globs.numY + j] = 
+              max(globs.myX[i] - o * 0.001, (REAL)0.0);
+          }
+      }
+  }
 }
 
 //All arrays are size [n]
