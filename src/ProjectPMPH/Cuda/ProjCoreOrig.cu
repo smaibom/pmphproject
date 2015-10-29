@@ -42,7 +42,7 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
         }
 
     //Device memory
-  REAL* dmyTimeline, dmyX,* dmyY,* dmyVarX, *dmyVarY;
+  REAL* dmyTimeline,* dmyX,* dmyY,* dmyVarX, *dmyVarY;
   cudaMalloc((void**)&dmyVarX, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&dmyX, numX * sizeof(REAL));
   cudaMalloc((void**)&dmyY, numY * sizeof(REAL));
