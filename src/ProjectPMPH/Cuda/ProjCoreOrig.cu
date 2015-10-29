@@ -62,9 +62,9 @@ void setPayoff_cuda(PrivGlobs& globs, unsigned int outer)
     dim3 numBlocks(globs.numX / BLOCK_SIZE, globs.numY / BLOCK_SIZE, outer);
   
   //kernel
-    setPayoffKernel<<<numBlocks, threadsPerBlock>>>(globs.dmyX, globs.dmyResult, globs.numX, globs.numY);
+    setPayoffKernel<<<numBlocks, threadsPerBlock>>>(globs.dmyX, globs.globs.dmyResult, globs.numX, globs.numY);
 
-  cudaMemcpy(globs.myResult, globs.dmyResult, outer*globs.numX*globs.numY*sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaMemcpy(globs.myResult, globs.globs.dmyResult, outer*globs.numX*globs.numY*sizeof(REAL), cudaMemcpyDeviceToHost);
 }
 
 //All arrays are size [n]
@@ -219,17 +219,14 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   REAL* yy = (REAL*) malloc(sizeof(REAL)*outer*numZ); // [outer][numZ]
 
   //Device memory
-  REAL* dmyVarX,* dmyDxx,* dmyResult;
+  REAL* dmyVarX,* dmyDxx;
  
-
-  cudaMalloc((void**)&dmyResult, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&dmyVarX, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&dmyDxx, outer * numX * 4 * sizeof(REAL));
 
 
   cudaMemcpy(globs.du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-
-  cudaMemcpy(dmyResult, globs.myResult, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  cudaMemcpy(globs.dmyResult, globs.myResult, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
   cudaMemcpy(dmyVarX, globs.myVarX, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
   cudaMemcpy(dmyDxx, globs.myDxx, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
 
@@ -237,7 +234,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   dim3 numBlocks(numX / BLOCK_SIZE, numY / BLOCK_SIZE, outer);
 
   REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
-  rollback_x<<< numBlocks, threadsPerBlock >>> (globs.dax, globs.dbx, globs.dcx, globs.du, dmyVarX, dmyDxx, dmyResult,
+  rollback_x<<< numBlocks, threadsPerBlock >>> (globs.dax, globs.dbx, globs.dcx, globs.du, dmyVarX, dmyDxx, globs.dmyResult,
             dtInv, numX, numY);
 
   cudaMemcpy(ax, globs.dax, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
@@ -263,7 +260,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   numBlocks.x = numY / BLOCK_SIZE;
   numBlocks.y = numX / BLOCK_SIZE;
 
-  rollback_y<<< numBlocks, threadsPerBlock >>> (day, dby, dcy, globs.du, dv, dmyVarY, dmyDyy, dmyResult,
+  rollback_y<<< numBlocks, threadsPerBlock >>> (day, dby, dcy, globs.du, dv, dmyVarY, dmyDyy, globs.dmyResult,
             dtInv, numX, numY);
 
   cudaMemcpy(ay, day, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
@@ -328,7 +325,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
   cudaFree(dmyVarX);
   cudaFree(dmyDxx);
-  cudaFree(dmyResult);
   cudaFree(dv);
   cudaFree(dmyVarY);
   cudaFree(dmyDyy);
