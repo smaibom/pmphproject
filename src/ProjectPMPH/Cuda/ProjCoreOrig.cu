@@ -275,15 +275,11 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   }
 
 
-  REAL* dy;
-
-  cudaMalloc((void**)&dy, outer * numY * numX * sizeof(REAL));
-
 
   cudaMemcpy(globs.du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  rollback_implicit_y<<< numBlocks, threadsPerBlock >>> (dy, globs.du, globs.dv,
+  rollback_implicit_y<<< numBlocks, threadsPerBlock >>> (globs.dy, globs.du, globs.dv,
             dtInv, numX, numY);
-  cudaMemcpy(y, dy, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaMemcpy(y, globs.dy, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
 
   // for(int o = 0; o < outer; o++)
   // {
