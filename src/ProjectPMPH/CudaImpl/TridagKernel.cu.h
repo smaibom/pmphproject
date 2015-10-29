@@ -3,7 +3,7 @@
 
 #include <cuda_runtime.h>
 
-typedef float REAL;
+//typedef float REAL;
 
 class MyReal2 {
   public:
@@ -336,7 +336,7 @@ void tridagCUDAWrapper( const unsigned int block_size,
                         REAL*   uu 
 ) {
     unsigned int num_blocks;
-    unsigned int sh_mem_size = block_size * 32;
+    unsigned int sh_mem_size = block_size * 64;
 
     // assumes sgm_sz divides block_size
     if((block_size % sgm_sz)!=0) {

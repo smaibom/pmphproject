@@ -1,9 +1,9 @@
 #include "ProjHelperFun.h"
 #include "Constants.h"
-#include "TridagPar.h"
 #include <iostream>
 
 using namespace std;
+#include "TridagKernel.cu.h"
 
 #define BLOCK_SIZE 32
 
@@ -88,7 +88,7 @@ __global__ void rollback_y(REAL* ay, REAL* by, REAL* cy, REAL* u, REAL* v, REAL*
 
   v[o * numX * numY + i * numY + j] = 0.0;
 
-  if(j > 0) 
+  if(j > 0)
     {
       v[o * numX * numY + i * numY + j] +=  (0.5*myVarY[o * numM + i * numY + j]*myDyy[j * 4 + 0])
 	*myResult[o * numM + i * numY + j-1];
@@ -100,7 +100,7 @@ __global__ void rollback_y(REAL* ay, REAL* by, REAL* cy, REAL* u, REAL* v, REAL*
 
   if(j < numY-1) 
     {
-      v[o * numX * numY + i * numY + j] +=  
+      v[o * numX * numY + i * numY + j] +=
 	(0.5*myVarY[o * numM + i * numY + j]
 	 *myDyy[j * 4 + 2])
 	*myResult[o * numM + i * numY + j+1];
@@ -210,8 +210,8 @@ inline void tridag(REAL* a,REAL* b,REAL* c,const REAL* r,const int n,
 
 
 void
-rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX, 
-          const int& numY) 
+rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
+          const int& numY)
 {
   unsigned numZ = max(numX,numY);
   unsigned numM = numX * numY;
@@ -229,15 +229,21 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
   //Device memory
   REAL* dax,* dbx,* dcx,* du,* dmyVarX,* dmyDxx,* dmyResult;
+  REAL* dv,* dmyVarY,* dmyDyy,* day,* dby,* dcy;
+  REAL* dy,* duu;
+
+
   cudaMalloc((void**)&dax, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&dbx, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&dcx, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&du, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&duu, outer * numX * numY * sizeof(REAL));
 
   cudaMalloc((void**)&dmyResult, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&dmyVarX, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&dmyDxx, outer * numX * 4 * sizeof(REAL));
 
+  cudaMalloc((void**)&dy, outer * numY * numX * sizeof(REAL));
 
   cudaMemcpy(du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
 
@@ -255,9 +261,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaMemcpy(ax, dax, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   cudaMemcpy(bx, dbx, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   cudaMemcpy(cx, dcx, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
-
-
-  REAL* dv,* dmyVarY,* dmyDyy,* day,* dby,* dcy;
 
   cudaMalloc((void**)&day, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&dby, outer * numX * numY * sizeof(REAL));
@@ -285,55 +288,59 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaMemcpy(u, du, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
 
 
+  tridagCUDAWrapper( numY,
+		     dax,
+		     dbx,
+		     dcx,
+		     du,
+		     numX * numY * outer,
+		     numX,
+		     du,
+		     duu );
 
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
-  for(int o = 0; o < outer; o++) 
-  {
-    for(int j=0;j<numY;j++) 
-      {
-      // here yy should have size [numX]
-      tridagPar(&ax[o * numX * numY + j * numX],&bx[o * numX * numY + j * numX],
-                &cx[o * numX * numY + j * numX], &u[o * numX * numY + j * numX], 
-                numX, &u[o * numX * numY + numX * j], &yy[o*numZ]);
-    }
-  }
+// #pragma omp parallel for default(shared) schedule(static) if(outer>8)
+//   for(int o = 0; o < outer; o++)
+//   {
+//     for(int j=0;j<numY;j++)
+//       {
+//       // here yy should have size [numX]
+//       tridagPar(&ax[o * numX * numY + j * numX],&bx[o * numX * numY + j * numX],
+//                 &cx[o * numX * numY + j * numX], &u[o * numX * numY + j * numX],
+//                 numX, &u[o * numX * numY + numX * j], &yy[o*numZ]);
+//     }
+//   }
 
 
-  REAL* dy;
-
-  cudaMalloc((void**)&dy, outer * numY * numX * sizeof(REAL));
 
 
-  cudaMemcpy(du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+//  cudaMemcpy(du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+
   rollback_implicit_y<<< numBlocks, threadsPerBlock >>> (dy, du, dv,
 						dtInv, numX, numY);
   cudaMemcpy(y, dy, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
 
+
+  tridagCUDAWrapper( numY,
+		     day,
+		     dby,
+		     dcy,
+		     dy,
+		     numX * numY * outer,
+		     numY,
+		     dmyResult,
+		     duu );
+  
+  cudaMemcpy(globs.myResult, dmyResult, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   // for(int o = 0; o < outer; o++)
   // {
-  //   REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
   //   for(int i=0;i<numX;i++)
   //   {
-  //     for(int j=0;j<numY;j++)
-  //     {  // here a, b, c should have size [numY]
-  //       y[o * numX * numY + i * numY + j] =
-  //         dtInv*u[o * numX * numY + j * numX + i]
-  //          -0.5*v[o * numX * numY + i * numY + j];
-  //     }
+  //     // here yy should have size [numY]
+  //     tridagPar(&ay[o * numX * numY + i * numY],&by[o * numX * numY + i * numY],
+  //               &cy[o * numX * numY + i * numY],&y[o * numX * numY + i * numY],
+  //               numY,&globs.myResult[o * numM + i * numY],&yy[o*numZ]);
   //   }
   // }
-
-#pragma omp parallel for default(shared) schedule(static) if(outer>8)
-  for(int o = 0; o < outer; o++)
-  {
-    for(int i=0;i<numX;i++)
-    {
-      // here yy should have size [numY]
-      tridagPar(&ay[o * numX * numY + i * numY],&by[o * numX * numY + i * numY],
-                &cy[o * numX * numY + i * numY],&y[o * numX * numY + i * numY],
-                numY,&globs.myResult[o * numM + i * numY],&yy[o*numZ]);
-    }
-  }
 
 
   /* Free Memory */
@@ -351,8 +358,8 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaFree(day);
   cudaFree(dby);
   cudaFree(dcy);
-  
-  
+
+
   free(u);
   free(ax);
   free(ay);
