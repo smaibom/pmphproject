@@ -5,7 +5,7 @@
 #define BLOCK_SIZE 32
 
 template <int T>
-__global__ void tilling_transpose_kernel(float *m_in, float *m_out, int rows ,int collums) {
+__global__ void tilling_transpose_kernel(REAL *m_in, REAL *m_out, int rows ,int collums) {
     __shared__ float tile[T][T+1];
     int i = threadIdx.y;
     int j = threadIdx.x;
