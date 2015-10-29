@@ -84,13 +84,3 @@ void initOperator(  REAL* x,
     Dxx[(n-1) * 4 + 3] = 0.0;
 }
 
-void transpose(REAL *matrix_in,REAL* matrix_out,int row, int collum,int outer){
-    for(int o = 0; o < outer; o++){ 
-        for(int i = 0; i < row; i++){
-            for(int j = 0; j < collum; j++){
-                matrix_out [o * row * collum + j*row+i] = 
-                    matrix_in[o*row*collum+i*collum+j];  
-            }
-        }
-    }
-}
