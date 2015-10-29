@@ -237,9 +237,8 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaMemcpy(cx, globs.dcx, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
 
 
-  REAL* dv,* dmyVarY,* dmyDyy;
+  REAL* dmyVarY,* dmyDyy;
 
-  cudaMalloc((void**)&dv, outer * numX * numY * sizeof(REAL));
 
   cudaMalloc((void**)&dmyVarY, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&dmyDyy, outer * numY * 4 * sizeof(REAL));
@@ -252,13 +251,13 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   numBlocks.x = numY / BLOCK_SIZE;
   numBlocks.y = numX / BLOCK_SIZE;
 
-  rollback_y<<< numBlocks, threadsPerBlock >>> (globs.day, globs.dby, globs.dcy, globs.du, dv, dmyVarY, dmyDyy, globs.dmyResult,
+  rollback_y<<< numBlocks, threadsPerBlock >>> (globs.day, globs.dby, globs.dcy, globs.du, globs.dv, dmyVarY, dmyDyy, globs.dmyResult,
             dtInv, numX, numY);
 
   cudaMemcpy(ay, globs.day, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   cudaMemcpy(by, globs.dby, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   cudaMemcpy(cy, globs.dcy, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
-  cudaMemcpy(v, dv, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaMemcpy(v, globs.dv, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   cudaMemcpy(u, globs.du, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
 
 
@@ -282,7 +281,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
 
   cudaMemcpy(globs.du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
-  rollback_implicit_y<<< numBlocks, threadsPerBlock >>> (dy, globs.du, dv,
+  rollback_implicit_y<<< numBlocks, threadsPerBlock >>> (dy, globs.du, globs.dv,
             dtInv, numX, numY);
   cudaMemcpy(y, dy, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
 
@@ -314,7 +313,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
 
   /* Free Memory */
-  cudaFree(dv);
   cudaFree(dmyVarY);
   cudaFree(dmyDyy);
   
