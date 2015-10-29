@@ -1,6 +1,6 @@
 #include "ProjHelperFun.cu.h"
 #include "Constants.h"
-#include "TridagPar.h"
+#include "TridagKernel.cu.h"
 
 #define BLOCK_SIZE 32
 
@@ -218,7 +218,11 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   REAL* y = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numZ][numZ]
   REAL* yy = (REAL*) malloc(sizeof(REAL)*outer*numZ); // [outer][numZ]
 
+  REAL* duu;
   //Device memory
+
+  cudaMalloc((void**)&duu, outer * numX * numY * sizeof(REAL));
+
 
   cudaMemcpy(globs.du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
   cudaMemcpy(globs.dmyResult, globs.myResult, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
@@ -246,8 +250,12 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   numBlocks.x = numY / BLOCK_SIZE;
   numBlocks.y = numX / BLOCK_SIZE;
 
+
+
   rollback_y<<< numBlocks, threadsPerBlock >>> (globs.day, globs.dby, globs.dcy, globs.du, globs.dv, globs.dmyVarY, globs.dmyDyy, globs.dmyResult,
             dtInv, numX, numY);
+
+
 
   cudaMemcpy(ay, globs.day, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   cudaMemcpy(by, globs.dby, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
@@ -255,7 +263,16 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   cudaMemcpy(v, globs.dv, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   cudaMemcpy(u, globs.du, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
 
-
+  tridagCUDAWrapper( numY,
+         globs.dax,
+         globs.dbx,
+         globs.dcx,
+         globs.du,
+         numX * numY * outer,
+         numX,
+         globs.du,
+         duu );
+/*
 
 #pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for(int o = 0; o < outer; o++) 
@@ -269,7 +286,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
     }
   }
 
-
+*/
 
   cudaMemcpy(globs.du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
   rollback_implicit_y<<< numBlocks, threadsPerBlock >>> (globs.dy, globs.du, globs.dv,
@@ -289,7 +306,18 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   //     }
   //   }
   // }
-
+  tridagCUDAWrapper( numY,
+         globs.day,
+         globs.dby,
+         globs.dcy,
+         globs.dy,
+         numX * numY * outer,
+         numY,
+         globs.dmyResult,
+         duu );
+  
+  cudaMemcpy(globs.myResult, globs.dmyResult, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+  /*
 #pragma omp parallel for default(shared) schedule(static) if(outer>8)
   for(int o = 0; o < outer; o++)
   {
@@ -301,7 +329,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
                 numY,&globs.myResult[o * numM + i * numY],&yy[o*numZ]);
     }
   }
-
+*/
 
   /* Free Memory */
 

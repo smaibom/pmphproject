@@ -6,7 +6,7 @@ INCLUDES    = -I ../include
 GPU_OPTS   = -D lgWARP=5
 
 SOURCES_CPP =ProjectMain.cpp ProjHelperFun.cpp ProjCoreOrig.cu
-HELPERS     =ProjHelperFun.cu.h ../include/Constants.h ../include/ParseInput.h ../include/ParserC.h ../include/OpenmpUtil.h TridagPar.h
+HELPERS     =ProjHelperFun.cu.h ../include/Constants.h ../include/ParseInput.h ../include/ParserC.h ../include/OpenmpUtil.h TridagKernel.cu.h
 OBJECTS     =ProjectMain.o ProjHelperFun.o  ProjCoreOrig.o
 EXECUTABLE  =runproject
 
