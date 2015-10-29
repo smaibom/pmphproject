@@ -4,7 +4,7 @@
 
 #define BLOCK_SIZE 32
 
-//Kernels
+//Kernelsa
 
 __global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, REAL* myDxx, REAL* myResult,
                            REAL dtInv, int numX, int numY) {
