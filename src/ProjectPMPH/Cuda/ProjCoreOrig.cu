@@ -67,21 +67,6 @@ void setPayoff_cuda(PrivGlobs& globs, unsigned int outer)
   cudaMemcpy(globs.myResult, globs.dmyResult, outer*globs.numX*globs.numY*sizeof(REAL), cudaMemcpyDeviceToHost);
 }
 
-void setPayoff(PrivGlobs& globs, unsigned int outer)
-{
-  unsigned int myR_size = globs.numY * globs.numX;
-  for(unsigned int o = 0; o < outer; o++) {
-    for(unsigned i=0;i<globs.numX;++i)
-      {
-        for(unsigned j=0;j<globs.numY;++j)
-          {
-            globs.myResult[o * myR_size + i * globs.numY + j] = 
-              max(globs.myX[i] - o * 0.001, (REAL)0.0);
-          }
-      }
-  }
-}
-
 //All arrays are size [n]
 inline void tridag(REAL* a,REAL* b,REAL* c,const REAL* r,const int n, 
   REAL* u, REAL* uu)
@@ -117,6 +102,52 @@ inline void tridag(REAL* a,REAL* b,REAL* c,const REAL* r,const int n,
 }
 
 
+
+__global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, REAL* myDxx, REAL* myResult,
+                           REAL dtInv, int numX, int numY) {
+
+  int i = BLOCK_SIZE * blockIdx.x + threadIdx.x;
+  int j = BLOCK_SIZE * blockIdx.y + threadIdx.y;
+  int o = blockIdx.z;
+
+  int numM = numY * numX;
+
+  ax[o * numX * numY + j * numX + i] = -0.5*(0.5*myVarX[o * numM + j * numX + i]*myDxx[i * 4 + 0]);
+
+  bx[o * numX * numY + j * numX + i] =
+    dtInv - 0.5*(0.5*myVarX[o * numM + j * numX + i]
+                 *myDxx[i * 4 + 1]);
+  cx[o * numX * numY + j * numX + i] =
+    -0.5*(0.5*myVarX[o * numM + j * numX + i]
+          *myDxx[i * 4 + 2]);
+  //  explicit x
+  u[o * numX * numY + j * numX + i] =
+    dtInv*myResult[o * numM + i * numY + j];
+
+  if(i > 0) {
+      u[o * numX * numY + j * numX + i] +=
+        0.5*(0.5*myVarX[o * numM + + j * numX + i]
+             *myDxx[i * 4 + 0])
+        *myResult[o * numM + (i-1) * numY + j];
+    }
+
+  u[o * numX * numY + j * numX + i]  +=
+    0.5*(0.5*myVarX[o * numM + + j * numX + i]*myDxx[i * 4 + 1])
+    *myResult[o * numM + i * numY + j];
+
+  if(i < numX-1) {
+      u[o * numX * numY + j * numX + i] +=
+        0.5*(0.5*myVarX[o * numM + + j * numX + i]
+             *myDxx[i * 4 + 2])
+        *myResult[o * numM + (i+1) * numY + j];
+    }
+
+
+}
+
+
+
+
 void
 rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX, 
           const int& numY) 
@@ -135,47 +166,39 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   REAL* y = (REAL*) malloc(sizeof(REAL) * outer * numZ * numZ); // [outer][numZ][numZ]
   REAL* yy = (REAL*) malloc(sizeof(REAL)*outer*numZ); // [outer][numZ]
 
-// X-loop
-  for (int o = 0; o < outer; o++) 
-  {
-    REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
-    for(int j=0;j<numY;j++) 
-    {
-      for(int i=0;i<numX;i++) 
-      {
-        // implicit x
-        ax[o * numZ * numZ + j * numZ + i] = 
-          -0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
-                   *globs.myDxx[i * 4 + 0]);
-        bx[o * numZ * numZ + j * numZ + i] = 
-          dtInv - 0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
-                          *globs.myDxx[i * 4 + 1]);
-        cx[o * numZ * numZ + j * numZ + i] =
-          -0.5*(0.5*globs.myVarX[o * numM + j * numX + i]
-                   *globs.myDxx[i * 4 + 2]);
-        //  explicit x
-        u[o * numX * numY + j * numX + i] = 
-          dtInv*globs.myResult[o * numM + i * numY + j];
-        if(i > 0) 
-        {
-          u[o * numX * numY + j * numX + i] += 
-            0.5*(0.5*globs.myVarX[o * numM + + j * numX + i]
-                    *globs.myDxx[i * 4 + 0])
-                    *globs.myResult[o * numM + (i-1) * numY + j];
-        }
-        u[o * numX * numY + j * numX + i]  +=  
-          0.5*(0.5*globs.myVarX[o * numM + + j * numX + i]*globs.myDxx[i * 4 + 1])
-                  *globs.myResult[o * numM + i * numY + j];
-        if(i < numX-1) 
-        {
-          u[o * numX * numY + j * numX + i] += 
-            0.5*(0.5*globs.myVarX[o * numM + + j * numX + i]
-                    *globs.myDxx[i * 4 + 2])
-                    *globs.myResult[o * numM + (i+1) * numY + j];
-        }
-      }
-    }
-  }
+
+  //Device memory
+  REAL* dax,* dbx,* dcx,* du,* dmyVarX,* dmyDxx,* dmyResult;
+  cudaMalloc((void**)&dax, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&dbx, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&dcx, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&du, outer * numX * numY * sizeof(REAL));
+
+  cudaMalloc((void**)&dmyResult, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&dmyVarX, outer * numX * numY * sizeof(REAL));
+  cudaMalloc((void**)&dmyDxx, outer * numX * 4 * sizeof(REAL));
+
+
+  cudaMemcpy(du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+
+  cudaMemcpy(dmyResult, globs.myResult, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  cudaMemcpy(dmyVarX, globs.myVarX, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
+  cudaMemcpy(dmyDxx, globs.myDxx, outer * numX * 4 * sizeof(REAL), cudaMemcpyHostToDevice);
+
+  dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
+  dim3 numBlocks(numX / BLOCK_SIZE, numY / BLOCK_SIZE, outer);
+
+  REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
+  rollback_x<<< numBlocks, threadsPerBlock >>> (dax, dbx, dcx, du, dmyVarX, dmyDxx, dmyResult,
+            dtInv, numX, numY);
+
+  cudaMemcpy(ax, dax, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaMemcpy(bx, dbx, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaMemcpy(cx, dcx, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
+
+
+
+
   for (int o = 0; o < outer; o++) 
   {
     REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
