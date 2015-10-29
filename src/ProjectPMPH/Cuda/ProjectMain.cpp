@@ -1,6 +1,6 @@
 #include "../include/ParseInput.h"
 
-#include "ProjHelperFun.h"
+#include "ProjHelperFun.cu.h"
 
 int main()
 {

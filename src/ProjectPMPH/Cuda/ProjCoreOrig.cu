@@ -1,4 +1,4 @@
-#include "ProjHelperFun.h"
+#include "ProjHelperFun.cu.h"
 #include "Constants.h"
 #include "TridagPar.h"
 
