@@ -72,7 +72,7 @@ __global__ void setPayoffKernel(REAL* myX, REAL*   myResult, unsigned int numX, 
     int j = BLOCK_SIZE * blockIdx.y + threadIdx.y;
     int o = blockIdx.z;
   
-    myResult[o * (numY * numX) + i * numY + j] = 
+    myResult[o * (numY * numX) + j * numX + i] = 
       max(myX[i] - o * 0.001, (REAL)0.0);
 }
 
@@ -119,24 +119,24 @@ __global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, 
           *myDxx[i * 4 + 2]);
   //  explicit x
   u[o * numX * numY + j * numX + i] =
-    dtInv*myResult[o * numM + i * numY + j];
+    dtInv*myResult[o * numM + j * numX + i];
 
   if(i > 0) {
       u[o * numX * numY + j * numX + i] +=
         0.5*(0.5*myVarX[o * numM + + j * numX + i]
              *myDxx[i * 4 + 0])
-        *myResult[o * numM + (i-1) * numY + j];
+        *myResult[o * numM + j * numX + (i-1)];
     }
 
   u[o * numX * numY + j * numX + i]  +=
     0.5*(0.5*myVarX[o * numM + + j * numX + i]*myDxx[i * 4 + 1])
-    *myResult[o * numM + i * numY + j];
+    *myResult[o * numM + j * numX + i];
 
   if(i < numX-1) {
       u[o * numX * numY + j * numX + i] +=
         0.5*(0.5*myVarX[o * numM + + j * numX + i]
              *myDxx[i * 4 + 2])
-        *myResult[o * numM + (i+1) * numY + j];
+        *myResult[o * numM + j * numX + i];
     }
 }
 
@@ -200,6 +200,16 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   REAL dtInv = 1.0/(globs.myTimeline[g+1]-globs.myTimeline[g]);
   rollback_x<<< numBlocks, threadsPerBlock >>> (globs.dax, globs.dbx, globs.dcx, globs.du, globs.dmyVarX, globs.dmyDxx, globs.dmyResult,
             dtInv, numX, numY);
+
+  const int T = BLOCK_SIZE;
+
+  numBlocks.x = numY/BLOCK_SIZE;
+  numBlocks.y = numX/BLOCK_SIZE;
+  tilling_transpose_kernel<T><<<numBlocks,threadsPerBlock>>>(globs.dmyVarY,globs.tmp,globs.numX,globs.numY);
+  REAL* tmp = globs.dmyVarY;
+  globs.dmyVarY = globs.tmp;
+  globs.tmp = tmp;
+
 
   numBlocks.x = numY / BLOCK_SIZE;
   numBlocks.y = numX / BLOCK_SIZE;
