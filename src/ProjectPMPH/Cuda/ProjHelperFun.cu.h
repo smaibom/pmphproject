@@ -58,6 +58,7 @@ struct PrivGlobs {
   REAL* dv;
   REAL* dy;
   REAL* dyy;
+  REAL* duu;
 
   PrivGlobs( ) {
     printf("Invalid Contructor: need to provide the array sizes! EXITING...!\n");
@@ -104,6 +105,7 @@ struct PrivGlobs {
     cudaMalloc((void**)&this->dv, outer * numX * numY * sizeof(REAL));
     cudaMalloc((void**)&this->dy, outer * numY * numX * sizeof(REAL));
     cudaMalloc((void**)&this->dmyDyy, outer * numY * 4 * sizeof(REAL));
+    cudaMalloc((void**)&this->duu, outer * numX * numY * sizeof(REAL));
   } 
 } __attribute__ ((aligned (128)));
 

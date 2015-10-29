@@ -218,10 +218,8 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
   REAL* y = (REAL*) malloc(sizeof(REAL) * outer * numX * numY); // [outer][numZ][numZ]
   REAL* yy = (REAL*) malloc(sizeof(REAL)*outer*numZ); // [outer][numZ]
 
-  REAL* duu;
   //Device memory
 
-  cudaMalloc((void**)&duu, outer * numX * numY * sizeof(REAL));
 
 
   cudaMemcpy(globs.du, u, outer * numX * numY * sizeof(REAL), cudaMemcpyHostToDevice);
@@ -271,7 +269,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
          numX * numY * outer,
          numX,
          globs.du,
-         duu );
+         globs.duu );
 /*
 
 #pragma omp parallel for default(shared) schedule(static) if(outer>8)
@@ -314,7 +312,7 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
          numX * numY * outer,
          numY,
          globs.dmyResult,
-         duu );
+         globs.duu );
   
   cudaMemcpy(globs.myResult, globs.dmyResult, outer * numX * numY * sizeof(REAL), cudaMemcpyDeviceToHost);
   /*
