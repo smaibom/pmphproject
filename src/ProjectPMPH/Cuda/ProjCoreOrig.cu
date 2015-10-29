@@ -154,48 +154,50 @@ __global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, 
 }
 
 
-
-__global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, REAL* myDxx, REAL* myResult,
+__global__ void rollback_y(REAL* ay, REAL* by, REAL* cy, REAL* u, REAL* v, REAL* myVarY, REAL* myDyy, REAL* myResult,
                            REAL dtInv, int numX, int numY) {
-
-  int i = BLOCK_SIZE * blockIdx.x + threadIdx.x;
-  int j = BLOCK_SIZE * blockIdx.y + threadIdx.y;
+  int j = BLOCK_SIZE * blockIdx.x + threadIdx.x;
+  int i = BLOCK_SIZE * blockIdx.y + threadIdx.y;
   int o = blockIdx.z;
+  int numM = numX * numY;
 
-  int numM = numY * numX;
+  v[o * numX * numY + i * numY + j] = 0.0;
 
-  ax[o * numX * numY + j * numX + i] = -0.5*(0.5*myVarX[o * numM + j * numX + i]*myDxx[i * 4 + 0]);
-
-  bx[o * numX * numY + j * numX + i] =
-    dtInv - 0.5*(0.5*myVarX[o * numM + j * numX + i]
-                 *myDxx[i * 4 + 1]);
-  cx[o * numX * numY + j * numX + i] =
-    -0.5*(0.5*myVarX[o * numM + j * numX + i]
-          *myDxx[i * 4 + 2]);
-  //  explicit x
-  u[o * numX * numY + j * numX + i] =
-    dtInv*myResult[o * numM + i * numY + j];
-
-  if(i > 0) {
-      u[o * numX * numY + j * numX + i] +=
-        0.5*(0.5*myVarX[o * numM + + j * numX + i]
-             *myDxx[i * 4 + 0])
-        *myResult[o * numM + (i-1) * numY + j];
+  if(j > 0) 
+    {
+      v[o * numX * numY + i * numY + j] +=  (0.5*myVarY[o * numM + i * numY + j]*myDyy[j * 4 + 0])
+  *myResult[o * numM + i * numY + j-1];
     }
 
-  u[o * numX * numY + j * numX + i]  +=
-    0.5*(0.5*myVarX[o * numM + + j * numX + i]*myDxx[i * 4 + 1])
-    *myResult[o * numM + i * numY + j];
+  v[o * numX * numY + i * numY + j] += (0.5*myVarY[o * numM + i * numY + j]
+          *myDyy[j * 4 + 1])
+    * myResult[o * numM + i  * numY + j];
 
-  if(i < numX-1) {
-      u[o * numX * numY + j * numX + i] +=
-        0.5*(0.5*myVarX[o * numM + + j * numX + i]
-             *myDxx[i * 4 + 2])
-        *myResult[o * numM + (i+1) * numY + j];
+  if(j < numY-1) 
+    {
+      v[o * numX * numY + i * numY + j] +=  
+  (0.5*myVarY[o * numM + i * numY + j]
+   *myDyy[j * 4 + 2])
+  *myResult[o * numM + i * numY + j+1];
     }
 
+  u[o * numX * numY + j * numX + i] += v[o * numX * numY + i * numY + j];
 
+  // Implicit y
+
+  ay[o * numX * numY + i * numY + j] =
+    -0.5*(0.5*myVarY[o * numM + i * numY + j]
+    *myDyy[j * 4 + 0]);
+
+  by[o * numX * numY + i * numY + j] = 
+    dtInv - 0.5*(0.5*myVarY[o * numM + i * numY + j]
+     *myDyy[j * 4 + 1]);
+
+  cy[o * numX * numY + i * numY + j] =
+    -0.5*(0.5*myVarY[o * numM + i * numY + j]
+    *myDyy[j * 4 + 2]);
 }
+
 
 
 void
