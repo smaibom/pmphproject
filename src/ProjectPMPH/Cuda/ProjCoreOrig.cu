@@ -328,7 +328,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
   /* Free Memory */
 
-  cudaFree(globs.dax);
   cudaFree(dbx);
   cudaFree(dcx);
   cudaFree(du);
