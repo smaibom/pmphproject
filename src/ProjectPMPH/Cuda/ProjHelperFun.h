@@ -19,21 +19,33 @@ struct PrivGlobs {
 
   //	grid
   REAL*        myX;        // [numX]
+  REAL*        dmyX;
   REAL*        myY;        // [numY]
+  REAL*        dmyY;
   REAL*        myTimeline; // [numT]
+  REAL*        dmyTimeLine;
   unsigned            myXindex;
   unsigned            myYindex;
 
   //	variable
   REAL*   myResult; // [outer][numX][numY]
+  REAL*   dmyResult; // [outer][numX][numY]
 
   //	coeffs
   REAL*   myVarX; // [outer][numX][numY]
+  REAL*   dmyVarX; // [outer][numX][numY]
   REAL*   myVarY; // [outer][numX][numY]
+  REAL*   dmyVarY; // [outer][numX][numY]
 
   //	operators
   REAL*  myDxx;  // [numX][4]
+  REAL*  dmyDxx;  // [numX][4]
   REAL*  myDyy;  // [numY][4]
+  REAL*  dmyDyy;  // [numY][4]
+
+  // x and y, abc arrays
+
+  // u, v and uu
 
   PrivGlobs( ) {
     printf("Invalid Contructor: need to provide the array sizes! EXITING...!\n");
@@ -49,15 +61,19 @@ struct PrivGlobs {
     this->numT = numT;
     this->numM = numX * numY;
     this->myX = (REAL*) malloc(sizeof(REAL) * numX);
+    this->dmyX = cudaMalloc((void**)&this->dmyX, numX * sizeof(REAL));
     this->myDxx = (REAL*) malloc(sizeof(REAL) * numX * 4);
     this->myY  = (REAL*) malloc(sizeof(REAL) * numY);
-
+    this->dmyY = cudaMalloc((void**)&this->dmyY, numY * sizeof(REAL));
     this->myDyy = (REAL*) malloc(sizeof(REAL) * numY * 4);
 
     this->myTimeline = (REAL*) malloc(sizeof(REAL) * numT);
+    this->dmyTimeLine = cudaMalloc((void**)&this->dmyTimeline, numT * sizeof(REAL));
 
     this->  myVarX = (REAL*) malloc(sizeof(REAL) * numX * numY * outer);
     this->  myVarY = (REAL*) malloc(sizeof(REAL) * numX * numY * outer);
+    this->dmyVarX = cudaMalloc((void**)&this->dmyVarX, outer * numX * numY * sizeof(REAL));
+    this->dmyVarY = cudaMalloc((void**)&this->dmyVarY, outer * numX * numY * sizeof(REAL));
     this->myResult = (REAL*) malloc(sizeof(REAL) * numX * numY * outer);
 
   }
