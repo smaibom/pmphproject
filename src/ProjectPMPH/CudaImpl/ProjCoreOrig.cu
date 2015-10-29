@@ -23,7 +23,7 @@ void setPayoff_cuda(PrivGlobs& globs, unsigned int outer)
 	REAL* myX_d;
   	REAL* myResult_d;
   	cudaMalloc((void**)&myX_d, globs.numX*sizeof(REAL ));
-  	cudaMalloc((void**)&myResult_d, outer*globs.numX*globs.numX*sizeof(REAL));
+  	cudaMalloc((void**)&myResult_d, outer*globs.numX*globs.numY*sizeof(REAL));
   
  	cudaMemcpy(myX_d, globs.myX, globs.numX*sizeof(REAL ), cudaMemcpyHostToDevice);
 	
@@ -34,8 +34,8 @@ void setPayoff_cuda(PrivGlobs& globs, unsigned int outer)
   	setPayoffKernel<<<numBlocks, threadsPerBlock>>>(myX_d, myResult_d, globs.numX, globs.numY);
 	cout<<"d2"<<endl;
 	
-	//free(globs.myResult);
-	cudaMemcpy(globs.myResult, myResult_d , outer*globs.numX*globs.numX*sizeof(REAL), cudaMemcpyDeviceToHost);
+	free(globs.myResult);
+	cudaMemcpy(globs.myResult, myResult_d , outer*globs.numX*globs.numY*sizeof(REAL), cudaMemcpyDeviceToHost);
 		cout<<"d3"<<endl;
 	cudaFree(myX_d);
 	cudaFree(myResult_d);
