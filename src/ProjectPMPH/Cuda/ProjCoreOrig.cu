@@ -13,7 +13,7 @@ __global__ void updateParamsKernel(const unsigned g, const REAL alpha,
     int z = blockIdx.z * blockDim.z + threadIdx.z;
 
     myVarX[z*numM+i*numY+j] = exp(2.0*(beta*log(myX[i])+myY[j]-0.5*nu*nu*myTimeline[g]));
-    myVarY[o * numM + i * numY + j] =exp(2.0*(  alpha*log(myX[i])+myY[j]- 0.5*nu*nu*myTimeline[g] ));
+    myVarY[z* numM + i * numY + j] =exp(2.0*(  alpha*log(myX[i])+myY[j]- 0.5*nu*nu*myTimeline[g] ));
 }
 
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, 
