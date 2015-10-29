@@ -62,9 +62,9 @@ void setPayoff_cuda(PrivGlobs& globs, unsigned int outer)
     dim3 numBlocks(globs.numX / BLOCK_SIZE, globs.numY / BLOCK_SIZE, outer);
   
   //kernel
-    setPayoffKernel<<<numBlocks, threadsPerBlock>>>(globs.dmyX, globs.globs.dmyResult, globs.numX, globs.numY);
+    setPayoffKernel<<<numBlocks, threadsPerBlock>>>(globs.dmyX, globs.dmyResult, globs.numX, globs.numY);
 
-  cudaMemcpy(globs.myResult, globs.globs.dmyResult, outer*globs.numX*globs.numY*sizeof(REAL), cudaMemcpyDeviceToHost);
+  cudaMemcpy(globs.myResult, globs.dmyResult, outer*globs.numX*globs.numY*sizeof(REAL), cudaMemcpyDeviceToHost);
 }
 
 //All arrays are size [n]
@@ -220,7 +220,6 @@ rollback( const unsigned g, PrivGlobs& globs, int outer, const int& numX,
 
   //Device memory
   REAL* dmyVarX,* dmyDxx;
- 
   cudaMalloc((void**)&dmyVarX, outer * numX * numY * sizeof(REAL));
   cudaMalloc((void**)&dmyDxx, outer * numX * 4 * sizeof(REAL));
 
