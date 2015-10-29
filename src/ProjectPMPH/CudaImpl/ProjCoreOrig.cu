@@ -376,7 +376,7 @@ void   run_OrigCPU(const unsigned int& outer,const unsigned int& numX,
   initOperator(globals.myY, globals.numY, globals.myDyy);
 
 
-  setPayoff(globals, outer);
+  setPayoff_cuda(globals, outer);
 
 
   for(int g = numT-2;g>=0;--g)
