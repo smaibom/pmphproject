@@ -2,7 +2,7 @@
 #include "Constants.h"
 #include "TridagPar.h"
 
-
+#define BLOCK_SIZE 32
 
 __global__ void updateParamsKernel(const unsigned g, const REAL alpha, 
                                    const REAL beta, const REAL nu, REAL* myVarX,
