@@ -27,7 +27,7 @@ Figure \ref{fig_res} shows a plot of the runtime in each test in the four config
 
 
 
-\subparagraph{Comments:} As expected the original CPU implementation has the highest runtime average by a recognizable margin. The parallelized versions of the code (with CUDA and openmp) have very similar runtimes, but the CUDA implementation has a lower runtime average due to an outlier in the openmp version runtimes. The orriginal CPU implementation with openmp on outer loop has the lowest runtime average, possible reasons are fewer overhead and memory faster access velocity of CPU over GPU. A lower runtime of the CUDA parallel version over the openmp one could be expected in a larger data set.
+\subparagraph{Comments:} As expected the original CPU implementation has the highest runtime average by a recognizable margin. The parallelized versions of the code (with CUDA and openmp) have very similar runtimes, but the CUDA implementation has a lower runtime average due to an outlier in the openmp version runtimes. The orriginal CPU implementation with openmp on outer loop has the lowest runtime average, possible reasons are fewer overhead and faster memory access velocity of CPU over GPU. A lower runtime of the CUDA parallel version over the openmp one could be expected in a larger data set.
 
 \subsection{Validation}
 The results obtained in all tests were valid.
