@@ -9,6 +9,7 @@ Arrays which needs to be expanded with an outer dimension:
 \item The temporary arrays u and v in rollback, reads values from myResult, so it depends on the outer value. 
 \item y reads from u and v, so it depends on outer. 
 \item yy i used for storing intermediate results in tridag from arrays which may depend on the outer value 
+\item a, b and c    
 \end{itemize}
 
 The arrays myX, myY, myDxx, myDyy and myTimeline does not need to be array expanded, there is no dependancy on the value of the outer loop. myVarX and myVarY only depends on the timeline loop, which is sequential.
@@ -73,7 +74,7 @@ $$\mathrm{sequential} \to \mathrm{parallel} \to \mathrm{parallel} \to \mathrm{pa
 \subparagraph{Validity:} This transformation is dependent on some of the already performed array expansions in section \ref{sec:arrayexp}.
  With these expansions, the transformation is valid. It does not change the order of execution within each iteration of the outer loop.
 \subsubsection{Memory-motivated}
-
+\label{memory}
 \paragraph{Loop interchanging for memory coalescence}
 \subparagraph{Motivation:} Given that our working set of arrays are all stored in row-major order, we have that subsequent columns in the
  same row are stored subsequently in memory. To take advantage of spatial-locality and CUDA's memory banks we wish to iterate over columns
@@ -102,4 +103,4 @@ $$\mathrm{sequential} \to \mathrm{parallel} \to \mathrm{parallel} \to \mathrm{pa
 \subparagraph{Validity:} The \verb!a!, \verb!b!, and \verb!c! arrays had been reused, so the validity of the transformation is dependent on
  the expansion of the two arrays.
 \subsection{Transposition}
-
+In section \ref{memory} we interchanged loops for memory coalescence resulting in non coalesced access in myVarX. To achieve coalesced access we transpose myVarX and read the transposed memory location.
