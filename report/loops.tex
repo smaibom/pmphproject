@@ -16,6 +16,15 @@ for( unsigned i = 0; i < outer; ++ i ) {
 }
 \end{lstlisting}
 
+\begin{lstlisting}[caption=Value function, label=value]
+initGrid(s0,alpha,nu,t, numX, numY, numT, globs);
+initOperator(globs.myX,globs.myDxx);
+initOperator(globs.myY,globs.myDyy);
+
+setPayoff(strike, globs);
+\end{lstlisting}
+
+
 \subsection{Second level}
 
 \paragraph{setPayoff}
