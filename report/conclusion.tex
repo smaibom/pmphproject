@@ -4,4 +4,4 @@
 Moving the a,b and c array calculations into the explicit x and y loops gave us no speedup. This resulted in doing unnecessary  array expansion instead. On the small dataset this is a neglectful decrease in speed however, but it could have a impact when using larger dimensions. 
 
 \subsection{Further Improvement}
-Currently we do not have kernels for the initialisation, we could move these calculations to the GPU instead and do it in parallel instead. It would save doing cudamemcpy calls for the dx, dy, dxx, dyy and myTimeline arrays.
+Currently we do not have kernels for the initialisation, we could move these calculations to the GPU and do it in parallel instead. It would save doing cudamemcpy calls for the dx, dy, dxx, dyy and myTimeline arrays, which would the overhead from cudamemcpy.
