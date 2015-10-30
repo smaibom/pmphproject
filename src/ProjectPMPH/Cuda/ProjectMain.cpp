@@ -1,6 +1,7 @@
 #include "../include/ParseInput.h"
 
 #include "ProjHelperFun.cu.h"
+#include <fstream>
 
 int main()
 {
