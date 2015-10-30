@@ -1,6 +1,14 @@
 \section{Conclusion}
-
+\subsection{Results}
 \subsection{Reflections}
+Moving the a,b and c array calculations into the explicit x and y loops gave us no speedup. This resulted in doing unnecessary  array expansion instead. On the small dataset this is a neglectful decrease in speed however, but it could have a impact when using larger dimensions.
+
+When parallising on GPU with a relatively small dataset such as we have, there is very little room for overhead and missing optimisations
+ when competing
+ with simple CPU parallisation. Our CUDA implementation, while faster than the original by a factor of 5, struggles to compete with the
+ incredibly simple to implement OpenMP versions. This in stark difference compared to large bulk operations on large data sets,
+ where CUDA can
+ trivially achieve massive speedups due to its sheer degree of parallism.
 
 \subsection{Further Improvement}
-
+Currently we do not have kernels for the initialisation, we could move these calculations to the GPU and do it in parallel instead. It would save doing cudamemcpy calls for the dx, dy, dxx, dyy and myTimeline arrays, which would the overhead from cudamemcpy.
