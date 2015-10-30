@@ -72,6 +72,8 @@ for(unsigned i=0;i<globs.myX.size();++i)
 \end{lstlisting}
 
 \subsubsection{Rollback}
+
+\paragraph{Explicit x and y loops} These loops contains no cross iteration dependencies and are therefore trivially parallel.
 \begin{lstlisting}[caption=Explicit x loop, label=exloop]
   for(i=0;i<numX;i++) {
         for(j=0;j<numY;j++) {
@@ -116,6 +118,9 @@ for(unsigned i=0;i<globs.myX.size();++i)
         }
     }
 \end{lstlisting}
+
+\paragraph{Implicit x and y loops} These loops are not parallel yet due to tridag depending on \verb!a!, \verb!b!, and \verb!c!. However,
+ it is not inherently sequential.
 \begin{lstlisting}[caption=Implicit x loop, label=impxloop]
 for(j=0;j<numY;j++) {
     for(i=0;i<numX;i++) {
