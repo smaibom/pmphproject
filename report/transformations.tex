@@ -4,5 +4,24 @@
 
 \subsection{Nest interchange and loop distribution}
 
+\subsubsection{Structural}
+\paragraph{Interchanging the outer loop inwards}
+\subparagraph{Motivation} In the original structure of the program, we have that a whole slew of loops
+ (all of the loops in section \ref{sec:third}) are nested
+ within the sequential time iterating loop (listing \ref{timeloop}) which itself is positioned within
+ the outer loop (listing \ref{outerloop}). Meaning that we in general had 4-tiered loop nests of the following difficult to parallise
+ structure.
+$$\mathrm{parallel} \to \mathrm{sequential} \to \mathrm{parallel} \to \mathrm{parallel}$$
+
+\subparagraph{Action} Performed a nest interchange on the outer and time loops.
+
+\subparagraph{Result}
+
+\subparagraph{Validity}
+
+
+\subsubsection{Memory-based}
+
+
 \subsection{Transposition}
 
