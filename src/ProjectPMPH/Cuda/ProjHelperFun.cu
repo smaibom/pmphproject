@@ -4,6 +4,10 @@
 /**** HELPER FUNCTIONS ****/
 /**************************/
 
+__global__
+
+
+
 /**
  * Fills in:
  *   globs.myTimeline  of size [0..numT-1]
