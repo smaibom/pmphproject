@@ -1,5 +1,7 @@
 \section{Conclusion}
 \subsection{Results}
+We have successfully parallelised the program using CUDA. Our parallised program validates and manages to produce a significant speedup against
+ the original implementation. However, it does not compete well with the CPU parallised version.
 \subsection{Reflections}
 Moving the a,b and c array calculations into the explicit x and y loops gave us no speedup. This resulted in doing unnecessary  array expansion instead. On the small dataset this is a neglectful decrease in speed however, but it could have a impact when using larger dimensions.
 
