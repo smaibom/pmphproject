@@ -6,21 +6,60 @@
 
 \subsubsection{Structural}
 \paragraph{Interchanging the outer loop inwards}
-\subparagraph{Motivation} In the original structure of the program, we have that a whole slew of loops
+\subparagraph{Motivation:} In the original structure of the program, we have that a whole slew of loops
  (all of the loops in section \ref{sec:third}) are nested
  within the sequential time iterating loop (listing \ref{timeloop}) which itself is positioned within
- the outer loop (listing \ref{outerloop}). Meaning that we in general had 4-tiered loop nests of the following difficult to parallise
+ the outer loop (listing \ref{outerloop}). Meaning that we in general had 4-tiered loop nests of the following
  structure.
 $$\mathrm{parallel} \to \mathrm{sequential} \to \mathrm{parallel} \to \mathrm{parallel}$$
+We would prefer to have any sequential loops in the outer nests so that we can more effectively
+ parallelise.
+\subparagraph{Action:} Performed a nest interchange on the outer and time loops, moving the outer loop inwards.
+\subparagraph{Result:} New structure where parallel loops are nested within the sequential loop.
+$$\mathrm{sequential} \to \mathrm{parallel} \to \mathrm{parallel} \to \mathrm{parallel}$$
+\subparagraph{Validity:} Moving a parallel loop inwards is always valid.
 
-\subparagraph{Action} Performed a nest interchange on the outer and time loops.
+\paragraph{Distributing the outer loop}
 
-\subparagraph{Result}
+\paragraph{Motivation:} Moving the outer loop inwards, leaves us with a big parallel loop nesting smaller double nested parallel loop
+ (Figure \ref{fig:bintouter}.
+ These inner loops all have different dimensions making it difficult to make a cohesive parallisation across them all. We would much
+ prefer mutliple triple-tiered loops with perfect loop nests.\\
+ \begin{figure}[h!]
+   \centering
+\begin{tikzpicture}[every node/.style={draw,rectangle}]
+     \node (time) {time}; \node [right= of time] (outer) {outer};
+     \node [right= of outer, draw = none] (dot) {$\vdots$}; \node
+     [above= 0.1cm of dot] (1) {loop 1}; \node [below= 0.1cm of dot]
+     (2) {loop n};
 
-\subparagraph{Validity}
+     \path [->] (time) edge (outer) [->] (outer) edge (1) edge (2);
+   \end{tikzpicture}
+   \caption{Loop nesting before interchange of outer}
+   \label{fig:bintouter}
+ \end{figure}
+\subparagraph{Action:} Distribute the outer loop across its contained loops.
+\subparagraph{Result:} All loops that had an outer-dimension are now perfect loop nests with the structure in Figure \ref{fig:aintouter}.
+\begin{figure}[h!]
+  \centering
+\begin{tikzpicture}[every node/.style={draw,rectangle}]
+    \node (time) {time}; \node [right= of time, draw = none] (dot)
+    {$\vdots$}; \node [above right= 0.1cm of dot] (1) {loop 1}; \node
+    [below right= 0.1cm of dot] (2) {loop n}; \node [left= 0.2cm of 2]
+    (outer2) {outer}; \node [left= 0.2cm of 1] (outer) {outer};
+
+    \path [->] (time) edge (outer) edge (outer2) [->] (outer) edge (1)
+    [->] (outer2) edge (2);
+  \end{tikzpicture}
+  \caption{Loop nesting after interchange of outer.}
+  \label{fig:aintouter}
+\end{figure}
+\subparagraph{Validity:} 
 
 
-\subsubsection{Memory-based}
+
+
+\subsubsection{Memory-motivated}
 
 
 \subsection{Transposition}
