@@ -13,7 +13,7 @@ int main()
     REAL* res = (REAL*)malloc(OUTER_LOOP_COUNT*sizeof(REAL));
 
 	ifstream runtimes_r;
-	runtimes_r.open ("runtime_openmp2.txt");
+	runtimes_r.open ("runtime_cuda.txt");
 	int cont = 0;
 	int ind;
 	vector<unsigned long int> time;
@@ -28,7 +28,7 @@ int main()
 	runtimes_r.close();
 	
 	ofstream runtimes_w;
-	runtimes_w.open ("runtime_openmp2.txt");
+	runtimes_w.open ("runtime_cuda.txt");
     {   // Original Program (Sequential CPU Execution)
         cout<<"\n// Running Original, Sequential Project Program"<<endl;
 
