@@ -108,14 +108,15 @@ __global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, 
   int o = blockIdx.z;
 
   int numM = numY * numX;
+  REAL tmp = myVarX[j*num+i];
 
-  ax[o * numX * numY + j * numX + i] = -0.5*(0.5*myVarX[j * numX + i]*myDxx[i * 4 + 0]);
+  ax[o * numX * numY + j * numX + i] = -0.5*(0.5*tmp*myDxx[i * 4 + 0]);
 
   bx[o * numX * numY + j * numX + i] =
-    dtInv - 0.5*(0.5*myVarX[j * numX + i]
+    dtInv - 0.5*(0.5*tmp
                  *myDxx[i * 4 + 1]);
   cx[o * numX * numY + j * numX + i] =
-    -0.5*(0.5*myVarX[j * numX + i]
+    -0.5*(0.5*tmp
           *myDxx[i * 4 + 2]);
   //  explicit x
   u[o * numX * numY + j * numX + i] =
@@ -123,18 +124,18 @@ __global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, 
 
   if(i > 0) {
       u[o * numX * numY + j * numX + i] +=
-        0.5*(0.5*myVarX[j * numX + i]
+        0.5*(0.5*tmp
              *myDxx[i * 4 + 0])
         *myResult[o * numM + (i-1) * numY + j];
     }
 
   u[o * numX * numY + j * numX + i]  +=
-    0.5*(0.5*myVarX[j * numX + i]*myDxx[i * 4 + 1])
+    0.5*(0.5*tmp*myDxx[i * 4 + 1])
     *myResult[o * numM + i * numY + j];
 
   if(i < numX-1) {
       u[o * numX * numY + j * numX + i] +=
-        0.5*(0.5*myVarX[j * numX + i]
+        0.5*(0.5*tmp
              *myDxx[i * 4 + 2])
         *myResult[o * numM + (i+1) * numY + j];
     }
