@@ -23,7 +23,6 @@ __global__ void tilling_transpose_kernel(REAL *m_in, REAL *m_out, int rows ,int 
 
 }
 
-
 __global__ void updateParamsKernel(const unsigned g, const REAL alpha, 
                                    const REAL beta, const REAL nu, REAL* myVarX,
                                    REAL* myVarY, REAL* myY, REAL* myX, 

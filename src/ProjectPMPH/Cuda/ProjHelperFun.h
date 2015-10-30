@@ -69,7 +69,6 @@ struct PrivGlobs {
 
     this->myTimeline = (REAL*) malloc(sizeof(REAL) * numT);
     this->dmyTimeLine = cudaMalloc((void**)&this->dmyTimeline, numT * sizeof(REAL));
-
     this->  myVarX = (REAL*) malloc(sizeof(REAL) * numX * numY );
     this->  myVarY = (REAL*) malloc(sizeof(REAL) * numX * numY );
     this->dmyVarX = cudaMalloc((void**)&this->dmyVarX, numX * numY * sizeof(REAL));
