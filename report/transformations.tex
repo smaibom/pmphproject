@@ -3,13 +3,15 @@
 \subsection{Array Expansion}
 \label{sec:arrayexp}
 To move the outer loop into the timeline loop on listing \ref{timeloop} and make the outer loop parallel, a number of array expansions in the global structure and local arrays in the rollback function is required.\\
-Arrays which needs to be expanded with an outer dimension: 
+Arrays which needs to be expanded with an outer dimension:
 \begin{itemize}
-\item myResults reads the outer value for calculating strike in the set payoff function in listing \ref{payoffloop}.
-\item The temporary arrays u and v in rollback, reads values from myResult, so it depends on the outer value. 
-\item y reads from u and v, so it depends on outer. 
-\item yy i used for storing intermediate results in tridag from arrays which may depend on the outer value 
-\item a, b and c    
+\item In the loop in \verb!setPayoff! (Listing \ref{payoffloop}), the temporary variable \verb!payoff! is used to calculate
+ \verb!myResult!. Since \verb!payoff! is declared in the outer nest, all the inner iterations depend on the same version of it. Hence
+ it must be either privatised, array expanded, or calculations inlined.
+\item The temporary arrays u and v in rollback, reads values from myResult, so it depends on the outer value.
+\item y reads from u and v, so it depends on outer.
+\item yy i used for storing intermediate results in tridag from arrays which may depend on the outer value
+\item a, b and c
 \end{itemize}
 
 The arrays myX, myY, myDxx, myDyy and myTimeline does not need to be array expanded, there is no dependancy on the value of the outer loop. myVarX and myVarY only depends on the timeline loop, which is sequential.
