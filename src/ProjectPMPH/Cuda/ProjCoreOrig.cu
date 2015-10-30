@@ -9,17 +9,16 @@ __global__ void tilling_transpose_kernel(REAL *m_in, REAL *m_out, int rows ,int 
     __shared__ REAL tile[T][T+1];
     int i = threadIdx.y;
     int j = threadIdx.x;
-    int z = blockIdx.z;
     int ii = blockIdx.y*T+i;
     int jj = blockIdx.x*T+j;
     if(ii < rows && jj < collums ) {
-        tile[i][j] = m_in[z*rows*collums+ii*collums+jj];
+        tile[i][j] = m_in[ii*collums+jj];
     } 
     __syncthreads();
     ii = blockIdx.y*T+j;
     jj = blockIdx.x*T+i;
     if( jj < collums && ii < rows){
-        m_out[z*rows*collums+jj*rows+ii] = tile[j][i];
+        m_out[jj*rows+ii] = tile[j][i];
     }
 
 }
@@ -31,10 +30,9 @@ __global__ void updateParamsKernel(const unsigned g, const REAL alpha,
                                    REAL* myTimeline,const int numY, const int numM){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
-    int z = blockIdx.z * blockDim.z + threadIdx.z;
 
-    myVarX[z*numM+i*numY+j] = exp(2.0*(beta*log(myX[i])+myY[j]-0.5*nu*nu*myTimeline[g]));
-    myVarY[z* numM + i * numY + j] =exp(2.0*(  alpha*log(myX[i])+myY[j]- 0.5*nu*nu*myTimeline[g] ));
+    myVarX[i*numY+j] = exp(2.0*(beta*log(myX[i])+myY[j]-0.5*nu*nu*myTimeline[g]));
+    myVarY[i * numY + j] =exp(2.0*(  alpha*log(myX[i])+myY[j]- 0.5*nu*nu*myTimeline[g] ));
 }
 
 void updateParams(const unsigned g, const REAL alpha, const REAL beta, 
@@ -48,7 +46,7 @@ void updateParams(const unsigned g, const REAL alpha, const REAL beta,
   //Device memory
   
   dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
-  dim3 numBlocks(numX / BLOCK_SIZE, numY / BLOCK_SIZE, outer);
+  dim3 numBlocks(numX / BLOCK_SIZE, numY / BLOCK_SIZE);
   updateParamsKernel<<< numBlocks, threadsPerBlock >>> (g, alpha, beta, nu, globs.dmyVarX, 
                                                         globs.dmyVarY, globs.dmyY,globs.dmyX,globs.dmyTimeline,numY,numX*numY);
 
@@ -111,13 +109,13 @@ __global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, 
 
   int numM = numY * numX;
 
-  ax[o * numX * numY + j * numX + i] = -0.5*(0.5*myVarX[o * numM + j * numX + i]*myDxx[i * 4 + 0]);
+  ax[o * numX * numY + j * numX + i] = -0.5*(0.5*myVarX[j * numX + i]*myDxx[i * 4 + 0]);
 
   bx[o * numX * numY + j * numX + i] =
-    dtInv - 0.5*(0.5*myVarX[o * numM + j * numX + i]
+    dtInv - 0.5*(0.5*myVarX[j * numX + i]
                  *myDxx[i * 4 + 1]);
   cx[o * numX * numY + j * numX + i] =
-    -0.5*(0.5*myVarX[o * numM + j * numX + i]
+    -0.5*(0.5*myVarX[j * numX + i]
           *myDxx[i * 4 + 2]);
   //  explicit x
   u[o * numX * numY + j * numX + i] =
@@ -125,18 +123,18 @@ __global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, 
 
   if(i > 0) {
       u[o * numX * numY + j * numX + i] +=
-        0.5*(0.5*myVarX[o * numM + + j * numX + i]
+        0.5*(0.5*myVarX[j * numX + i]
              *myDxx[i * 4 + 0])
         *myResult[o * numM + (i-1) * numY + j];
     }
 
   u[o * numX * numY + j * numX + i]  +=
-    0.5*(0.5*myVarX[o * numM + + j * numX + i]*myDxx[i * 4 + 1])
+    0.5*(0.5*myVarX[j * numX + i]*myDxx[i * 4 + 1])
     *myResult[o * numM + i * numY + j];
 
   if(i < numX-1) {
       u[o * numX * numY + j * numX + i] +=
-        0.5*(0.5*myVarX[o * numM + + j * numX + i]
+        0.5*(0.5*myVarX[j * numX + i]
              *myDxx[i * 4 + 2])
         *myResult[o * numM + (i+1) * numY + j];
     }
@@ -154,18 +152,18 @@ __global__ void rollback_y(REAL* ay, REAL* by, REAL* cy, REAL* u, REAL* v, REAL*
 
   if(j > 0) 
     {
-      v[o * numX * numY + i * numY + j] +=  (0.5*myVarY[o * numM + i * numY + j]*myDyy[j * 4 + 0])
+      v[o * numX * numY + i * numY + j] +=  (0.5*myVarY[i * numY + j]*myDyy[j * 4 + 0])
   *myResult[o * numM + i * numY + j-1];
     }
 
-  v[o * numX * numY + i * numY + j] += (0.5*myVarY[o * numM + i * numY + j]
+  v[o * numX * numY + i * numY + j] += (0.5*myVarY[i * numY + j]
           *myDyy[j * 4 + 1])
     * myResult[o * numM + i  * numY + j];
 
   if(j < numY-1) 
     {
       v[o * numX * numY + i * numY + j] +=  
-  (0.5*myVarY[o * numM + i * numY + j]
+  (0.5*myVarY[i * numY + j]
    *myDyy[j * 4 + 2])
   *myResult[o * numM + i * numY + j+1];
     }
@@ -175,15 +173,15 @@ __global__ void rollback_y(REAL* ay, REAL* by, REAL* cy, REAL* u, REAL* v, REAL*
   // Implicit y
 
   ay[o * numX * numY + i * numY + j] =
-    -0.5*(0.5*myVarY[o * numM + i * numY + j]
+    -0.5*(0.5*myVarY[i * numY + j]
     *myDyy[j * 4 + 0]);
 
   by[o * numX * numY + i * numY + j] = 
-    dtInv - 0.5*(0.5*myVarY[o * numM + i * numY + j]
+    dtInv - 0.5*(0.5*myVarY[i * numY + j]
      *myDyy[j * 4 + 1]);
 
   cy[o * numX * numY + i * numY + j] =
-    -0.5*(0.5*myVarY[o * numM + i * numY + j]
+    -0.5*(0.5*myVarY[i * numY + j]
     *myDyy[j * 4 + 2]);
 }
 
