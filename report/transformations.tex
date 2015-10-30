@@ -10,11 +10,11 @@ Arrays which needs to be expanded with an outer dimension:
  it must be either privatised, array expanded, or calculations inlined.
 \item The temporary arrays \verb!u! and \verb!v! in rollback, read values from \verb!myResult!, so they depend on the outer value.
 \item Setting \verb!y! requires reads from \verb!u! and \verb!v!, so it depends on outer.
-\item \verb!yy! is used for storing intermediate results in tridag from arrays which may depend on the outer value.
+\item \verb!yy! is used for storing intermediate results in \verb!tridag! from arrays which may depend on the outer value.
 \item The \verb!a!, \verb!b! and \verb!c! arrays are written to, and read from in each iteration of the outer loop.
 \end{itemize}
 
-The arrays myX, myY, myDxx, myDyy and myTimeline do not need to be array expanded, there is no dependancy on the value of the outer loop. myVarX and myVarY only depends on the timeline loop, which is sequential.
+The arrays myX, myY, myDxx, myDyy and myTimeline do not need to be array expanded, there is no dependency on the value of the outer loop. myVarX and myVarY only depends on the timeline loop, which is sequential.
 
 \subsection{Nest interchange and loop distribution}
 
@@ -36,14 +36,14 @@ $$\mathrm{sequential} \to \mathrm{parallel} \to \mathrm{parallel} \to \mathrm{pa
 \paragraph{Distribution of Implicit x \& y loops}
 \subparagraph{Motivation:} Currently the implicit x/y (Listing \ref{impxloop} \& \ref{impyloop}) consist of one or two loops along with a call
  to \verb!tridag!. We would prefer perfect loop nests.
-\subparagraph{Action:} Distribute the secondmost inner nest across the innermost nests.
+\subparagraph{Action:} Distribute the second-most inner nest across the innermost nests.
 \subparagraph{Result:} Two/three (for x/y) perfect loop nests.
 \subparagraph{Validity:} All used arrays are already array expanded as per section \ref{sec:arrayexp}.
 \paragraph{Distributing the outer loop}
 \subparagraph{Motivation:} Moving the outer loop inwards, leaves us with a big parallel loop nesting smaller double nested parallel loop
  (Figure \ref{fig:bintouter}.
- These inner loops all have different dimensions making it difficult to make a cohesive parallisation across them all. We would much
- prefer mutliple triple-tiered loops with perfect loop nests.\\
+ These inner loops all have different dimensions making it difficult to make a cohesive parallelisation across them all. We would much
+ prefer multiple triple-tiered loops with perfect loop nests.\\
  \begin{figure}[h!]
    \centering
 \begin{tikzpicture}[every node/.style={draw,rectangle}]
@@ -105,11 +105,11 @@ $$\mathrm{sequential} \to \mathrm{parallel} \to \mathrm{parallel} \to \mathrm{pa
 \subparagraph{Validity:} The \verb!a!, \verb!b!, and \verb!c! arrays had been reused, so the validity of the transformation is dependent on
  the expansion of the two arrays.
 \subsection{Transposition}
-In section \ref{memory} we interchanged loops for memory coalescence resulting in non coalesced access in myVarX. To achieve coalesced access we transpose myVarX and read the transposed memory location.
+In section \ref{memory} we interchanged loops for memory coalescence resulting in non coalesced access in \verb!myVarX!. To achieve coalesced access we transpose myVarX and read the transposed memory location.
 
 \subsection{Tridag}
 Tridag is not inherently a parallel function. However, it can be expressed as a sequence of scans interleaved with maps. We have
- been supplied with such a CUDA kernel, which we have applied to our parallised program.
+ been supplied with such a CUDA kernel, which we have applied to our parallelised program.
 
 \subsection{CUDA}
 After performing the transformations mentioned in this section all parallel loops in the program are now three-tiered perfect loop nests.
