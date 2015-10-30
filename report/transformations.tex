@@ -1,7 +1,7 @@
 \section{Transformations}
 
 \subsection{Array Expansion}
-
+\label{sec:arrayexp}
 To move the outer loop into the timeline loop on listing \ref{timeloop} and make the outer loop parallel, a number of array expansions in the global structure and local arrays in the rollback function is required.\\
 Arrays which needs to be expanded with an outer dimension: 
 \begin{itemize}
@@ -14,26 +14,94 @@ The a,b and c arrays for x and y is
 
 The arrays myX, myY, myDxx, myDyy and myTimeline does not need to be array expanded, there is no dependancy on the value of the outer loop. myVarX and myVarY only depends on the timeline loop, which is sequential.
 
+
 \subsection{Nest interchange and loop distribution}
 
 \subsubsection{Structural}
 \paragraph{Interchanging the outer loop inwards}
-\subparagraph{Motivation} In the original structure of the program, we have that a whole slew of loops
+\subparagraph{Motivation:} In the original structure of the program, we have that a whole slew of loops
  (all of the loops in section \ref{sec:third}) are nested
- within the sequential time iterating loop (listing \ref{timeloop}) which itself is positioned within
- the outer loop (listing \ref{outerloop}). Meaning that we in general had 4-tiered loop nests of the following difficult to parallise
+ within the sequential time iterating loop (Listing \ref{timeloop}) which itself is positioned within
+ the outer loop (Listing \ref{outerloop}). Meaning that we in general had 4-tiered loop nests of the following
  structure.
 $$\mathrm{parallel} \to \mathrm{sequential} \to \mathrm{parallel} \to \mathrm{parallel}$$
+We would prefer to have any sequential loops in the outer nests so that we can more effectively
+ parallelise.
+\subparagraph{Action:} Performed a nest interchange on the outer and time loops, moving the outer loop inwards.
+\subparagraph{Result:} New structure where parallel loops are nested within the sequential loop.
+$$\mathrm{sequential} \to \mathrm{parallel} \to \mathrm{parallel} \to \mathrm{parallel}$$
+\subparagraph{Validity:} Moving a parallel loop inwards is always valid.
 
-\subparagraph{Action} Performed a nest interchange on the outer and time loops.
+\paragraph{Distribution of Implicit x \& y loops}
+\subparagraph{Motivation:} Currently the implicit x/y (Listing \ref{impxloop} \& \ref{impyloop}) consist of one or two loops along with a call
+ to \verb!tridag!. We would prefer perfect loop nests.
+\subparagraph{Action:} Distribute the secondmost inner nest across the innermost nests.
+\subparagraph{Result:} Two/three (for x/y) perfect loop nests.
+\subparagraph{Validity:} All used arrays are already array expanded as per section \ref{sec:arrayexp}.
+\paragraph{Distributing the outer loop}
+\subparagraph{Motivation:} Moving the outer loop inwards, leaves us with a big parallel loop nesting smaller double nested parallel loop
+ (Figure \ref{fig:bintouter}.
+ These inner loops all have different dimensions making it difficult to make a cohesive parallisation across them all. We would much
+ prefer mutliple triple-tiered loops with perfect loop nests.\\
+ \begin{figure}[h!]
+   \centering
+\begin{tikzpicture}[every node/.style={draw,rectangle}]
+     \node (time) {time}; \node [right= of time] (outer) {outer};
+     \node [right= of outer, draw = none] (dot) {$\vdots$}; \node
+     [above= 0.1cm of dot] (1) {loop 1}; \node [below= 0.1cm of dot]
+     (2) {loop n};
 
-\subparagraph{Result}
+     \path [->] (time) edge (outer) [->] (outer) edge (1) edge (2);
+   \end{tikzpicture}
+   \caption{Loop nesting before interchange of outer}
+   \label{fig:bintouter}
+ \end{figure}
+\subparagraph{Action:} Distribute the outer loop across its contained loops.
+\subparagraph{Result:} All loops that had an outer-dimension are now perfect loop nests with the structure in Figure \ref{fig:aintouter}.
+\begin{figure}[h!]
+  \centering
+\begin{tikzpicture}[every node/.style={draw,rectangle}]
+    \node (time) {time}; \node [right= of time, draw = none] (dot)
+    {$\vdots$}; \node [above right= 0.1cm of dot] (1) {loop 1}; \node
+    [below right= 0.1cm of dot] (2) {loop n}; \node [left= 0.2cm of 2]
+    (outer2) {outer}; \node [left= 0.2cm of 1] (outer) {outer};
 
-\subparagraph{Validity}
+    \path [->] (time) edge (outer) edge (outer2) [->] (outer) edge (1)
+    [->] (outer2) edge (2);
+  \end{tikzpicture}
+  \caption{Loop nesting after interchange of outer.}
+  \label{fig:aintouter}
+\end{figure}
+\subparagraph{Validity:} This transformation is dependent on some of the already performed array expansions in section \ref{sec:arrayexp}.
+ With these expansions, the transformation is valid. It does not change the order of execution within each iteration of the outer loop.
+\subsubsection{Memory-motivated}
 
-
-\subsubsection{Memory-based}
-
-
+\paragraph{Loop interchanging for memory coalescence}
+\subparagraph{Motivation:} Given that our working set of arrays are all stored in row-major order, we have that subsequent columns in the
+ same row are stored subsequently in memory. To take advantage of spatial-locality and CUDA's memory banks we wish to iterate over columns
+ in our innermost nests. This is not the case in loops such as the explicit y loop (Listing \ref{eyloop}).
+\subparagraph{Action:} Interchange the two innermost loop nests where needed.
+\subparagraph{Result:} Mostly improved memory access patterns. However, some variables - such as \verb!myVarX! in (Listing \ref{exloop}) -
+ are now accessed uncoalesced.
+\subparagraph{Validity:} Parallel loops can always be interchanged inwards.
+\paragraph{Merging explicit \& implicit x/y}
+\subparagraph{Motivation:} One of the loops resulting from each of the distribution of the implicit x/y loops are now on the form.
+\begin{lstlisting}
+  for i = 1..n
+   for j = 1..m
+    a[i][j] = ...
+    b[i][j] = ...
+    c[i][j] = ...
+   endfor
+  endfor
+\end{lstlisting}
+ Each statement of each iteration of these loops reference the same memory location as the earlier explicit x/y
+ (Listings \ref{exloop} and \ref{eyloop}) such as to \verb!myVarX! - and now have the same nest structure. We wish make these loads just
+ once for each iteration.
+\subparagraph{Action:} Merge the explicit x and y loops with the corresponding implicit loop nests. Expand \verb!a!, \verb!b!, and \verb!c!
+ to two arrays, i.e. \verb!ax! and \verb!ay!, as they can no longer be reused.
+\subparagraph{Result:} Larger x and y loops.
+\subparagraph{Validity:} The \verb!a!, \verb!b!, and \verb!c! arrays had been reused, so the validity of the transformation is dependent on
+ the expansion of the two arrays.
 \subsection{Transposition}
 
