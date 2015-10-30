@@ -108,7 +108,7 @@ __global__ void rollback_x(REAL* ax, REAL* bx, REAL* cx, REAL* u, REAL* myVarX, 
   int o = blockIdx.z;
 
   int numM = numY * numX;
-  REAL tmp = myVarX[j*num+i];
+  REAL tmp = myVarX[j*numX+i];
 
   ax[o * numX * numY + j * numX + i] = -0.5*(0.5*tmp*myDxx[i * 4 + 0]);
 
