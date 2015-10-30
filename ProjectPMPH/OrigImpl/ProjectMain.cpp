@@ -17,7 +17,7 @@ int main()
     REAL* res = (REAL*)malloc(OUTER_LOOP_COUNT*sizeof(REAL));
 
 	ifstream runtimes_r;
-	runtimes_r.open ("runtime_seq.txt");
+	runtimes_r.open ("runtime_openmp1.txt");
 	int cont = 0;
 	int ind;
 	vector<unsigned long int> time;
@@ -32,7 +32,7 @@ int main()
 	runtimes_r.close();
 	
 	ofstream runtimes_w;
-	runtimes_w.open ("runtime_seq.txt");
+	runtimes_w.open ("runtime_openmp1.txt");
 
     {   // Original Program (Sequential CPU Execution)
 		
