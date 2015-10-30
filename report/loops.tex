@@ -52,6 +52,7 @@ for(int i = globs.myTimeline.size()-2;i>=0;--i)
 \end{lstlisting}
 
 \subsection{Third level}
+\label{sec:third}
 
 \paragraph{updateParams}
 This loop is trivially parallel in both loop nests as it does not write to any of the locations it reads from, and
@@ -115,7 +116,7 @@ for(unsigned i=0;i<globs.myX.size();++i)
         }
     }
 \end{lstlisting}
-\begin{lstlisting}
+\begin{lstlisting}[caption=Implicit x loop, label=impxloop]
 for(j=0;j<numY;j++) {
     for(i=0;i<numX;i++) {
         a[i] =		 - 0.5*(0.5*globs.myVarX[i][j]*globs.myDxx[i][0]);
@@ -125,7 +126,7 @@ for(j=0;j<numY;j++) {
     tridag(a,b,c,u[j],numX,u[j],yy);
 }
 \end{lstlisting}
-\begin{lstlisting}
+\begin{lstlisting}[caption=Implicit y loop, label=impyloop]
 for(i=0;i<numX;i++) {
      for(j=0;j<numY;j++) {
          a[j] =		 - 0.5*(0.5*globs.myVarY[i][j]*globs.myDyy[j][0]);
