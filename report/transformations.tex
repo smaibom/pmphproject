@@ -1,14 +1,15 @@
 \section{Transformations}
 
 \subsection{Array Expansion}
+
 To move the outer loop into the timeline loop on listing \ref{timeloop} and make the outer loop parallel, a number of array expansions in the global structure and local arrays in the rollback function is required.\\
-
-Arrays which needs to be expanded outer times: 
-The myResults reads the outer value for calculating strike in the set payoff function in listing \ref{payoffloop}.
-
-The temporary arrays u and in rollback depends on the value from myResult, so it has a dependancy on the outer value. 
-
-
+Arrays which needs to be expanded with an outer dimension: 
+\begin{itemize}
+\item myResults reads the outer value for calculating strike in the set payoff function in listing \ref{payoffloop}.
+\item The temporary arrays u and v in rollback, reads values from myResult, so it depends on the outer value. 
+\item y reads from u and v, so it depends on outer. 
+\item yy i used for storing intermediate results in tridag from arrays which may depend on the outer value 
+\end{itemize}
 The a,b and c arrays for x and y is 
 
 The arrays myX, myY, myDxx, myDyy and myTimeline does not need to be array expanded, there is no dependancy on the value of the outer loop. myVarX and myVarY only depends on the timeline loop, which is sequential.
